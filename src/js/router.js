@@ -1,5 +1,6 @@
 const views = {};
 let currentView = null;
+let currentCleanup = null;
 let container = null;
 
 export function registerView(name, mountFn) {
@@ -28,6 +29,11 @@ function mountView(name) {
   if (!views[name]) name = 'home';
   if (currentView === name) return;
 
+  if (currentCleanup) {
+    currentCleanup();
+    currentCleanup = null;
+  }
+
   container.innerHTML = '';
   currentView = name;
 
@@ -37,7 +43,10 @@ function mountView(name) {
   });
 
   if (views[name]) {
-    views[name](container);
+    const result = views[name](container);
+    if (typeof result === 'function') {
+      currentCleanup = result;
+    }
   }
 }
 
