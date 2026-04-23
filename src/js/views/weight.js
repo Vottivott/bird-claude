@@ -1,6 +1,7 @@
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler } from 'chart.js';
 import * as store from '../store.js';
 import { navigate } from '../router.js';
+import { namedAsset } from '../utils/assets.js';
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler);
 
@@ -23,7 +24,7 @@ export function mount(container) {
 
   div.innerHTML = `
     <div class="crow-display">
-      <img src="/assets/named_selection_borderless_8x_cleaned/58_log_weight.png" alt="Crow">
+      <img src="${namedAsset('58_log_weight.png')}" alt="Crow">
     </div>
 
     <div class="card">
@@ -146,7 +147,7 @@ export function mount(container) {
       weightKg: weight,
     });
 
-    navigate('weight');
+    navigate('weight', { force: true });
   });
 
   div.querySelector('#btn-back').addEventListener('click', () => navigate('home'));

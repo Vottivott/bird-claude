@@ -7,7 +7,11 @@ export function registerView(name, mountFn) {
   views[name] = mountFn;
 }
 
-export function navigate(viewName) {
+export function navigate(viewName, { force = false } = {}) {
+  if (force && currentView === viewName) {
+    mountView(viewName, true);
+    return;
+  }
   if (window.location.hash !== '#' + viewName) {
     window.location.hash = viewName;
   }
@@ -25,9 +29,9 @@ export function initRouter(containerEl) {
   handleHash();
 }
 
-function mountView(name) {
+function mountView(name, force = false) {
   if (!views[name]) name = 'home';
-  if (currentView === name) return;
+  if (currentView === name && !force) return;
 
   if (currentCleanup) {
     currentCleanup();
