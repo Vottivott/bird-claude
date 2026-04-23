@@ -1,6 +1,7 @@
 import { Chart, ScatterController, PointElement, LinearScale, Tooltip, Legend } from 'chart.js';
 import * as store from '../store.js';
 import { computeFrontier } from '../models/frontier.js';
+import { namedAsset } from '../utils/assets.js';
 
 Chart.register(ScatterController, PointElement, LinearScale, Tooltip, Legend);
 
@@ -33,7 +34,7 @@ const frontierPlugin = {
     ctx.lineTo(xScale.getPixelForValue(first.x), yScale.getPixelForValue(0));
     ctx.closePath();
 
-    ctx.fillStyle = 'rgba(139, 159, 212, 0.15)';
+    ctx.fillStyle = 'rgba(94, 107, 122, 0.15)';
     ctx.fill();
 
     ctx.beginPath();
@@ -41,7 +42,7 @@ const frontierPlugin = {
     for (let i = 1; i < hull.length; i++) {
       ctx.lineTo(xScale.getPixelForValue(hull[i].x), yScale.getPixelForValue(hull[i].y));
     }
-    ctx.strokeStyle = 'rgba(139, 159, 212, 0.6)';
+    ctx.strokeStyle = 'rgba(94, 107, 122, 0.6)';
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 4]);
     ctx.stroke();
@@ -60,7 +61,7 @@ export function mount(container) {
 
   div.innerHTML = `
     <div class="crow-display">
-      <img src="/assets/named_selection_borderless_8x_cleaned/${runs.length > 0 ? '52_happy1.png' : '38_pointing_to_the_right.png'}" alt="Crow">
+      <img src="${namedAsset(runs.length > 0 ? '52_happy1.png' : '38_pointing_to_the_right.png')}" alt="Crow">
     </div>
 
     <div class="records-chart">
@@ -115,10 +116,10 @@ export function mount(container) {
         label: 'Runs',
         data,
         pointBackgroundColor: runs.map(r =>
-          r.isFrontierPush ? '#E8C547' : '#8B9FD4'
+          r.isFrontierPush ? '#D4A830' : '#5E6B7A'
         ),
         pointBorderColor: runs.map(r =>
-          r.isFrontierPush ? '#C4A020' : '#6B7FB4'
+          r.isFrontierPush ? '#A88520' : '#3E4B5A'
         ),
         pointRadius: runs.map(r => r.isFrontierPush ? 8 : 6),
         pointBorderWidth: 2,

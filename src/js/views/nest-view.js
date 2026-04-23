@@ -1,5 +1,6 @@
 import * as store from '../store.js';
 import { NEST_LEVELS, getMaxAffordableLevel, getNextUnlock, getCurrentNestInfo, setNestLevel, placeFurniture } from '../models/nest.js';
+import { namedAsset } from '../utils/assets.js';
 
 const NEST_SCENES = [
   { bg: 'linear-gradient(180deg, #87CEEB 0%, #98D8A0 50%, #7BC47E 100%)', ground: '#7BC47E', label: 'Ground Nest' },
@@ -10,7 +11,7 @@ const NEST_SCENES = [
 
 const FURNITURE_DISPLAY = {
   swimming_pool: { label: 'Swimming Pool', color: '#5BC0DE', w: 50, h: 30 },
-  sunchair: { label: 'Sunchair', color: '#E8C547', w: 30, h: 30 },
+  sunchair: { label: 'Sunchair', color: '#D4A830', w: 30, h: 30 },
   daisy: { label: 'Daisy', color: '#FFE066', w: 20, h: 30 },
   tulip: { label: 'Tulip', color: '#FF6B8A', w: 20, h: 30 },
   sunflower: { label: 'Sunflower', color: '#FFD700', w: 25, h: 35 },
@@ -37,7 +38,7 @@ export function mount(container) {
         <div style="position:absolute;bottom:${nestInfo.level > 0 ? '40%' : '10%'};left:50%;transform:translateX(-50%);width:120px;height:40px;background:#8B6F47;border-radius:50%;border:3px solid #6B5230"></div>
         <!-- Crow -->
         <div style="position:absolute;bottom:${nestInfo.level > 0 ? 'calc(40% + 25px)' : 'calc(10% + 25px)'};left:50%;transform:translateX(-50%)">
-          <img src="/assets/named_selection_borderless_8x_cleaned/52_happy1.png" style="height:80px;object-fit:contain" alt="Crow in nest">
+          <img src="${namedAsset('52_happy1.png')}" style="height:80px;object-fit:contain" alt="Crow in nest">
         </div>
         <!-- Furniture -->
         <div id="furniture-display"></div>
@@ -54,7 +55,7 @@ export function mount(container) {
       <div class="nest-level">
         <div class="nest-level__current">${scene.label}</div>
         <div class="nest-level__next">
-          <img src="/assets/named_selection_borderless_8x_cleaned/stick_pile.png" style="width:20px;height:20px;vertical-align:middle">
+          <img src="${namedAsset('stick_pile.png')}" style="width:20px;height:20px;vertical-align:middle">
           ${econ.totalSticksEarned} sticks total
         </div>
       </div>

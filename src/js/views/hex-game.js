@@ -4,6 +4,7 @@ import { getPlantAtHex, waterPlant, collectPlant, plantSeed } from '../models/pl
 import { SHOP_ITEMS, PLANT_OPTIONS, WATER_OPTIONS, canAfford, buyShopItem, buyWater } from '../models/economy.js';
 import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
+import { namedAsset } from '../utils/assets.js';
 
 const HEX_SIZE = 40;
 const SQRT3 = Math.sqrt(3);
@@ -37,7 +38,7 @@ function drawHex(ctx, cx, cy, size, state, type) {
     ctx.textBaseline = 'middle';
     ctx.fillText('?', cx, cy);
   } else if (state === 'revealed') {
-    let fillColor = '#FFF8E7';
+    let fillColor = '#F0F1F4';
     if (type === 'shop') fillColor = '#FFE4C4';
     else if (type === 'soil') fillColor = '#D4E8C4';
     else if (type === 'plant') fillColor = '#E4F0D4';
@@ -69,15 +70,15 @@ function drawHex(ctx, cx, cy, size, state, type) {
       ctx.fillText('\u{1F331}', cx, cy);
     }
   } else if (state === 'current') {
-    ctx.fillStyle = '#B3C2E8';
+    ctx.fillStyle = '#8A9AAD';
     ctx.fill();
-    ctx.strokeStyle = '#8B9FD4';
+    ctx.strokeStyle = '#5E6B7A';
     ctx.lineWidth = 3;
     ctx.stroke();
   } else if (state === 'reachable') {
-    ctx.fillStyle = '#FFF8E7';
+    ctx.fillStyle = '#F0F1F4';
     ctx.fill();
-    ctx.strokeStyle = '#E8C547';
+    ctx.strokeStyle = '#D4A830';
     ctx.lineWidth = 2.5;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
@@ -109,7 +110,7 @@ export function mount(container) {
         Steps left: <span id="steps-left">${board.pendingSteps}</span>
       </div>
       <div class="hex-game__steps" style="background:var(--accent);color:var(--text)">
-        <img src="/assets/named_selection_borderless_8x_cleaned/seeds.png" style="width:18px;height:18px;vertical-align:middle"> <span id="hex-seeds">${econ.seeds}</span>
+        <img src="${namedAsset('seeds.png')}" style="width:18px;height:18px;vertical-align:middle"> <span id="hex-seeds">${econ.seeds}</span>
       </div>
     </div>
     <div class="hex-game__canvas-container">
@@ -301,7 +302,7 @@ export function mount(container) {
 
       const html = `
         <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
-          <img src="/assets/named_selection_borderless_8x_cleaned/50_at_shop.png" style="max-height:80px;display:block;margin:0 auto 8px">
+          <img src="${namedAsset('50_at_shop.png')}" style="max-height:80px;display:block;margin:0 auto 8px">
           Shop
         </h3>
         <p style="text-align:center;color:var(--text-light);margin-bottom:16px">You have <strong>${econ.seeds}</strong> seeds</p>
@@ -321,7 +322,7 @@ export function mount(container) {
         ${availableWater.map((w, i) => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border-radius:var(--radius-xs);margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:8px">
-              <img src="/assets/named_selection_borderless_8x_cleaned/${w.icon}.png" style="width:32px;height:32px;object-fit:contain">
+              <img src="${namedAsset(`${w.icon}.png`)}" style="width:32px;height:32px;object-fit:contain">
               <div>
                 <div style="font-weight:600">${w.name}</div>
                 <div style="font-size:12px;color:var(--text-light)">${w.uses} use${w.uses > 1 ? 's' : ''}</div>
@@ -376,7 +377,7 @@ export function mount(container) {
 
       const html = `
         <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
-          <img src="/assets/named_selection_borderless_8x_cleaned/34_planting_1.png" style="max-height:80px;display:block;margin:0 auto 8px">
+          <img src="${namedAsset('34_planting_1.png')}" style="max-height:80px;display:block;margin:0 auto 8px">
           Plant a Seed
         </h3>
         <p style="text-align:center;color:var(--text-light);margin-bottom:16px">You have <strong>${econ.seeds}</strong> seeds</p>

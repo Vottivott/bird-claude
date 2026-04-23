@@ -1,20 +1,20 @@
 :root {
-  --primary: #8B9FD4;
-  --primary-light: #B3C2E8;
-  --primary-dark: #6B7FB4;
-  --bg: #FFF8E7;
+  --primary: #5E6B7A;
+  --primary-light: #8A9AAD;
+  --primary-dark: #3E4B5A;
+  --bg: #F0F1F4;
   --bg-card: #FFFFFF;
-  --bg-warm: #FFF3D6;
-  --accent: #E8C547;
-  --accent-light: #F5E08A;
-  --green: #9FD4A0;
-  --green-dark: #6FB870;
-  --brown: #A0785A;
-  --brown-light: #C4A882;
-  --red: #E87D7D;
-  --text: #3A3A3A;
-  --text-light: #7A7A7A;
-  --text-muted: #B0B0B0;
+  --bg-warm: #E8EAEF;
+  --accent: #D4A830;
+  --accent-light: #F0D06A;
+  --green: #7FB88A;
+  --green-dark: #5A9A65;
+  --brown: #8A6B50;
+  --brown-light: #B09478;
+  --red: #CC6060;
+  --text: #2D2D32;
+  --text-light: #6A6A72;
+  --text-muted: #A0A0A8;
   --shadow: 0 2px 12px rgba(0,0,0,0.08);
   --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
   --radius: 16px;
@@ -88,6 +88,14 @@ html, body {
   width: 22px;
   height: 22px;
   object-fit: contain;
+}
+
+.currency--sticks .currency__icon {
+  filter:
+    drop-shadow(1px 0 0 #B89028)
+    drop-shadow(-1px 0 0 #B89028)
+    drop-shadow(0 1px 0 #B89028)
+    drop-shadow(0 -1px 0 #B89028);
 }
 
 .view-container {
