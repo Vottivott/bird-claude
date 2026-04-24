@@ -293,9 +293,16 @@ export function mount(container) {
         crowSprite = content.seeds > 1 ? '33_find_seeds.png' : '31_find_seed.png';
       }
 
+      let title;
+      if (content.sticks > 0) {
+        title = content.sticks === 1 ? 'Found a stick!' : 'Found sticks!';
+      } else {
+        title = content.seeds === 1 ? 'Found a seed!' : 'Found seeds!';
+      }
+
       await showRewardPopup({
         crowSprite,
-        title: content.sticks > 0 ? 'Found sticks!' : 'Found seeds!',
+        title,
         seedsAmount: content.seeds > 0 ? content.seeds : undefined,
         sticksAmount: content.sticks > 0 ? content.sticks : undefined,
       });

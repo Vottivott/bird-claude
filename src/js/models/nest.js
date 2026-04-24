@@ -1,10 +1,11 @@
 import * as store from '../store.js';
 
 export const NEST_LEVELS = [
-  { level: 0, name: 'Ground Nest', sticksRequired: 0, description: 'A cozy nest in the grass' },
-  { level: 1, name: 'Tree Nest', sticksRequired: 10, description: 'A nest up in a tree' },
-  { level: 2, name: 'Large Tree Nest', sticksRequired: 20, description: 'A spacious nest with a view' },
-  { level: 3, name: 'Grand Nest', sticksRequired: 30, description: 'A grand nest fit for a king' },
+  { level: 0, name: 'Forest Floor Nest', sticksRequired: 0, image: '01_forest_floor_nest_starter.png' },
+  { level: 1, name: 'Branch Nest', sticksRequired: 10, image: '02_branch_nest_growth.png' },
+  { level: 2, name: 'Mossy Canopy Nest', sticksRequired: 50, image: '03_mossy_canopy_nest.png' },
+  { level: 3, name: 'Sunlit Tree Hollow', sticksRequired: 100, image: '04_sunlit_tree_hollow_nest.png' },
+  { level: 4, name: 'Winter Snow Nest', sticksRequired: 1000, image: '05_winter_snow_nest.png' },
 ];
 
 export function getMaxAffordableLevel() {

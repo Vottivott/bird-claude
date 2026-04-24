@@ -1,40 +1,32 @@
 import * as store from '../store.js';
 import { createRNG, randomInt, randomChoice } from '../utils/random.js';
 
-export function generateBoard() {
-  const boardSeed = Date.now();
-  const rng = createRNG(boardSeed);
-  const hexes = [];
-  let nextId = 0;
+function extendBoard(board, count) {
+  const rng = createRNG(board.boardSeed + board.hexes.length * 1013);
+  let nextId = board.hexes.length;
 
-  const startHex = {
-    id: nextId++,
-    q: 0, r: 0,
-    type: 'start',
-    content: null,
-    revealed: true,
-    connections: [],
-  };
-  hexes.push(startHex);
+  const lastHexes = board.hexes.filter(h => h.connections.length === 0);
+  let prevIds = lastHexes.length > 0 ? lastHexes.map(h => h.id) : [board.hexes[board.hexes.length - 1].id];
 
-  let prevIds = [startHex.id];
-  let currentQ = 0;
-  let shopCounter = randomInt(rng, 12, 20);
-  let soilCounter = randomInt(rng, 8, 15);
+  const maxQ = Math.max(...board.hexes.map(h => h.q));
+  let currentQ = maxQ;
 
-  for (let step = 1; step <= 50; step++) {
+  let shopCounter = board._shopCounter || randomInt(rng, 4, 10);
+  let soilCounter = board._soilCounter || randomInt(rng, 5, 10);
+
+  for (let step = 0; step < count; step++) {
     currentQ++;
-    const isBranch = rng() < 0.25 && step > 2 && step < 48;
+    const isBranch = rng() < 0.25 && step > 1 && step < count - 2;
 
     let type = 'normal';
     shopCounter--;
     soilCounter--;
     if (shopCounter <= 0) {
       type = 'shop';
-      shopCounter = randomInt(rng, 15, 25);
+      shopCounter = randomInt(rng, 4, 10);
     } else if (soilCounter <= 0) {
       type = 'soil';
-      soilCounter = randomInt(rng, 10, 20);
+      soilCounter = randomInt(rng, 5, 10);
     }
 
     if (isBranch) {
@@ -50,10 +42,10 @@ export function generateBoard() {
       let type2 = 'normal';
       if (type !== 'shop' && shopCounter <= 2) {
         type2 = 'shop';
-        shopCounter = randomInt(rng, 15, 25);
+        shopCounter = randomInt(rng, 4, 10);
       } else if (type !== 'soil' && soilCounter <= 2) {
         type2 = 'soil';
-        soilCounter = randomInt(rng, 10, 20);
+        soilCounter = randomInt(rng, 5, 10);
       }
 
       const hexB = {
@@ -65,25 +57,23 @@ export function generateBoard() {
         connections: [],
       };
 
-      hexes.push(hexA, hexB);
+      board.hexes.push(hexA, hexB);
       for (const pid of prevIds) {
-        const prev = hexes.find(h => h.id === pid);
+        const prev = board.hexes.find(h => h.id === pid);
         prev.connections.push(hexA.id, hexB.id);
       }
 
-      // Merge point
       currentQ++;
       step++;
-      const mergeType = 'normal';
       const mergeHex = {
         id: nextId++,
         q: currentQ, r: 0,
-        type: mergeType,
+        type: 'normal',
         content: null,
         revealed: false,
         connections: [],
       };
-      hexes.push(mergeHex);
+      board.hexes.push(mergeHex);
       hexA.connections.push(mergeHex.id);
       hexB.connections.push(mergeHex.id);
       prevIds = [mergeHex.id];
@@ -97,25 +87,57 @@ export function generateBoard() {
         revealed: false,
         connections: [],
       };
-      hexes.push(hex);
+      board.hexes.push(hex);
       for (const pid of prevIds) {
-        const prev = hexes.find(h => h.id === pid);
+        const prev = board.hexes.find(h => h.id === pid);
         prev.connections.push(hex.id);
       }
       prevIds = [hex.id];
     }
   }
 
+  board._shopCounter = shopCounter;
+  board._soilCounter = soilCounter;
+}
+
+export function generateBoard() {
+  const boardSeed = Date.now();
   const board = {
     boardSeed,
-    hexes,
+    hexes: [],
     playerPosition: 0,
     pendingSteps: 0,
     totalHexesVisited: 1,
   };
 
+  const rng = createRNG(boardSeed);
+  const startHex = {
+    id: 0,
+    q: 0, r: 0,
+    type: 'start',
+    content: null,
+    revealed: true,
+    connections: [],
+  };
+  board.hexes.push(startHex);
+  board._shopCounter = randomInt(rng, 4, 5);
+  board._soilCounter = randomInt(rng, 6, 8);
+
+  extendBoard(board, 50);
+
   store.setHexBoard(board);
   return board;
+}
+
+function ensureBoardExtended(board) {
+  const currentHex = board.hexes.find(h => h.id === board.playerPosition);
+  if (!currentHex) return;
+
+  const maxQ = Math.max(...board.hexes.map(h => h.q));
+  const remainingQ = maxQ - currentHex.q;
+  if (remainingQ < 10) {
+    extendBoard(board, 30);
+  }
 }
 
 function revealHexOnBoard(board, hexId) {
@@ -165,6 +187,7 @@ export function movePlayer(targetHexId) {
     if (content.sticks > 0) store.addSticks(content.sticks, 'hex_sticks');
   }
 
+  ensureBoardExtended(board);
   store.setHexBoard(board);
   return { hex: board.hexes.find(h => h.id === targetHexId), content };
 }

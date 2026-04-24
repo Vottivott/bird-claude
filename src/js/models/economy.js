@@ -22,9 +22,9 @@ export const PLANT_OPTIONS = [
 ];
 
 export const WATER_OPTIONS = [
-  { name: 'Blue Watering Can', cost: 100, uses: 1, icon: 'watering_can_blue' },
-  { name: 'Copper Watering Can', cost: 150, uses: 2, icon: 'watering_can_copper' },
-  { name: 'Gold Watering Can', cost: 200, uses: 3, icon: 'watering_can_gold' },
+  { name: 'Blue Watering Can', cost: 30, uses: 1, icon: 'watering_can_blue' },
+  { name: 'Copper Watering Can', cost: 45, uses: 2, icon: 'watering_can_copper' },
+  { name: 'Gold Watering Can', cost: 60, uses: 3, icon: 'watering_can_gold' },
 ];
 
 export function getPlantOption(id) {

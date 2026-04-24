@@ -52,9 +52,9 @@ export function showRewardPopup(options) {
         <div class="reward-popup__title">${title}</div>
         ${extraImage ? `<img src="${extraImage}" style="max-height:80px;object-fit:contain;margin:8px auto;display:block" alt="">` : ''}
         ${detailsHtml}
-        ${seedsAmount ? `<div class="reward-popup__reward"><img src="${namedAsset('seeds.png')}" class="reward-popup__reward-icon">+${seedsAmount} seeds</div>` : ''}
-        ${sticksAmount ? `<div class="reward-popup__reward" style="color:var(--brown)"><img src="${namedAsset('stick_pile.png')}" class="reward-popup__reward-icon">+${sticksAmount} sticks</div>` : ''}
-        ${stepsAmount ? `<div class="reward-popup__reward" style="color:var(--primary)"><img src="${assetUrl('/assets/bird_footsteps.png')}" class="reward-popup__reward-icon">+${stepsAmount} steps</div>` : ''}
+        ${seedsAmount ? `<div class="reward-popup__reward"><img src="${namedAsset('seeds.png')}" class="reward-popup__reward-icon">+${seedsAmount} seed${seedsAmount !== 1 ? 's' : ''}</div>` : ''}
+        ${sticksAmount ? `<div class="reward-popup__reward" style="color:var(--brown)"><img src="${namedAsset('stick_pair.png')}" class="reward-popup__reward-icon" style="filter:drop-shadow(1px 0 0 #F5EDD4) drop-shadow(-1px 0 0 #F5EDD4) drop-shadow(0 1px 0 #F5EDD4) drop-shadow(0 -1px 0 #F5EDD4)">+${sticksAmount} stick${sticksAmount !== 1 ? 's' : ''}</div>` : ''}
+        ${stepsAmount ? `<div class="reward-popup__reward" style="color:var(--text)"><img src="${assetUrl('/assets/bird_footsteps.png')}" class="reward-popup__reward-icon">+${stepsAmount} step${stepsAmount !== 1 ? 's' : ''}</div>` : ''}
         <button class="btn btn--primary" style="margin-top:16px;width:100%">Continue</button>
       </div>
     `;

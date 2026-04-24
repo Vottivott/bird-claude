@@ -1,14 +1,7 @@
 import * as store from '../store.js';
 import { NEST_LEVELS, getMaxAffordableLevel, getNextUnlock, getCurrentNestInfo, setNestLevel, placeFurniture } from '../models/nest.js';
 import { getPlantOption } from '../models/economy.js';
-import { namedAsset, plantAsset } from '../utils/assets.js';
-
-const NEST_SCENES = [
-  { bg: 'linear-gradient(180deg, #87CEEB 0%, #98D8A0 50%, #7BC47E 100%)', ground: '#7BC47E', label: 'Ground Nest' },
-  { bg: 'linear-gradient(180deg, #87CEEB 0%, #6BB5D4 40%, #A0785A 70%, #7BC47E 100%)', ground: '#7BC47E', label: 'Tree Nest' },
-  { bg: 'linear-gradient(180deg, #87CEEB 0%, #6BB5D4 30%, #A0785A 65%, #7BC47E 100%)', ground: '#7BC47E', label: 'Large Tree Nest' },
-  { bg: 'linear-gradient(180deg, #6BAACC 0%, #87CEEB 30%, #A0785A 60%, #7BC47E 100%)', ground: '#7BC47E', label: 'Grand Nest' },
-];
+import { namedAsset, plantAsset, nestAsset } from '../utils/assets.js';
 
 function getItemImage(item) {
   if (item.type === 'plant' && item.image) return plantAsset(item.image);
@@ -22,35 +15,21 @@ export function mount(container) {
   const econ = store.getEconomy();
   const maxLevel = getMaxAffordableLevel();
   const nextUnlock = getNextUnlock();
-  const scene = NEST_SCENES[nestInfo.level] || NEST_SCENES[0];
+  const nestLevel = NEST_LEVELS[nestInfo.level] || NEST_LEVELS[0];
   const nest = store.getNest();
 
   const div = document.createElement('div');
   div.className = 'view';
 
   div.innerHTML = `
-    <div class="nest-scene" id="nest-scene" style="background:${scene.bg};border:2px solid #ddd">
-      <div style="position:relative;height:280px;overflow:hidden" id="nest-inner">
-        <!-- Nest platform -->
-        <div style="position:absolute;bottom:${nestInfo.level > 0 ? '40%' : '10%'};left:50%;transform:translateX(-50%);width:120px;height:40px;background:#8B6F47;border-radius:50%;border:3px solid #6B5230"></div>
-        <!-- Crow -->
-        <div style="position:absolute;bottom:${nestInfo.level > 0 ? 'calc(40% + 25px)' : 'calc(10% + 25px)'};left:50%;transform:translateX(-50%)">
-          <img src="${namedAsset('52_happy1.png')}" style="height:80px;object-fit:contain" alt="Crow in nest">
-        </div>
-        <!-- Furniture -->
-        <div id="furniture-display"></div>
-        ${nestInfo.level > 0 ? `
-          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;background:#8B6F47;height:40%;border-radius:4px"></div>
-          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground}"></div>
-        ` : `
-          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground}"></div>
-        `}
-      </div>
+    <div class="nest-scene" style="position:relative;border-radius:var(--radius);overflow:hidden;border:2px solid #ddd">
+      <img src="${nestAsset(nestLevel.image)}" style="width:100%;display:block" alt="${nestLevel.name}">
+      <div id="furniture-display" style="position:absolute;inset:0"></div>
     </div>
 
     <div class="nest-info">
       <div class="nest-level">
-        <div class="nest-level__current">${scene.label}</div>
+        <div class="nest-level__current">${nestLevel.name}</div>
         <div class="nest-level__next">
           <img src="${namedAsset('stick_pile.png')}" style="width:20px;height:20px;vertical-align:middle">
           ${econ.totalSticksEarned} sticks total
@@ -62,11 +41,11 @@ export function mount(container) {
       <div class="card">
         <div class="card__title">Next Nest</div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:50px;height:50px;border-radius:var(--radius-xs);background:#F0EDE4;display:flex;align-items:center;justify-content:center;font-size:24px">
-            ${maxLevel >= nextUnlock.level ? '' : '?'}
+          <div style="width:60px;height:60px;border-radius:var(--radius-xs);overflow:hidden;flex-shrink:0">
+            <img src="${nestAsset(nextUnlock.image)}" style="width:100%;height:100%;object-fit:cover;${maxLevel < nextUnlock.level ? 'filter:brightness(0.3) blur(2px)' : ''}" alt="">
           </div>
-          <div>
-            <div style="font-weight:600">${nextUnlock.name}</div>
+          <div style="flex:1">
+            <div style="font-weight:600">${maxLevel >= nextUnlock.level ? nextUnlock.name : '???'}</div>
             <div style="font-size:13px;color:var(--text-light)">${nextUnlock.sticksRequired} sticks needed (${Math.max(0, nextUnlock.sticksRequired - econ.totalSticksEarned)} more)</div>
             <div style="height:6px;background:#EEE;border-radius:3px;margin-top:6px;overflow:hidden">
               <div style="height:100%;background:var(--brown);border-radius:3px;width:${Math.min(100, (econ.totalSticksEarned / nextUnlock.sticksRequired) * 100)}%"></div>
@@ -119,47 +98,28 @@ export function mount(container) {
       </div>
     ` : ''}
 
-    ${NEST_LEVELS.filter(nl => nl.level > maxLevel + 1).length > 0 ? `
-      <div class="card" style="text-align:center;color:var(--text-muted)">
-        <div style="font-size:32px;margin-bottom:4px">?</div>
-        <div style="font-size:13px">${NEST_LEVELS.filter(nl => nl.level > maxLevel + 1).length} more nest${NEST_LEVELS.filter(nl => nl.level > maxLevel + 1).length > 1 ? 's' : ''} to discover</div>
-      </div>
-    ` : ''}
   `;
 
   container.appendChild(div);
 
-  // Render placed furniture in the scene
   const furnitureDisplay = div.querySelector('#furniture-display');
   if (furnitureDisplay && nest.furniture) {
     nest.furniture.forEach(item => {
       const img = getItemImage(item);
+      if (!img) return;
       const el = document.createElement('div');
-      const baseBottom = nestInfo.level > 0 ? 40 : 10;
       el.style.cssText = `
         position:absolute;
         left:${item.position.x * 100}%;
-        bottom:${baseBottom + 5 + item.position.y * 20}%;
-        transform:translateX(-50%);
-        display:flex;
-        align-items:center;
-        justify-content:center;
+        bottom:${item.position.y * 100}%;
+        transform:translate(-50%, 50%);
       `;
-      if (img) {
-        el.innerHTML = `<img src="${img}" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3))">`;
-      } else {
-        el.style.width = '30px';
-        el.style.height = '30px';
-        el.style.background = '#999';
-        el.style.borderRadius = '4px';
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-      }
+      el.innerHTML = `<img src="${img}" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3))">`;
       el.title = item.name;
       furnitureDisplay.appendChild(el);
     });
   }
 
-  // Upgrade button
   const upgradeBtn = div.querySelector('#btn-upgrade');
   if (upgradeBtn) {
     upgradeBtn.addEventListener('click', () => {
@@ -169,7 +129,6 @@ export function mount(container) {
     });
   }
 
-  // Inventory placement — tap to place at random position
   div.querySelectorAll('.inventory-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx);
@@ -183,14 +142,12 @@ export function mount(container) {
     });
   });
 
-  // Move placed furniture — tap to pick up and reposition
   div.querySelectorAll('.placed-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx);
       const nest = store.getNest();
       const item = nest.furniture[idx];
       if (!item) return;
-      // Move back to inventory, then re-place at new random position
       nest.furniture.splice(idx, 1);
       nest.inventory.push({ itemId: item.itemId, name: item.name, type: item.type, image: item.image });
       store.setNest(nest);

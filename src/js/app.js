@@ -20,9 +20,12 @@ function updateStatusBar() {
   const econ = store.getEconomy();
   document.getElementById('seeds-count').textContent = econ.seeds;
   document.getElementById('sticks-count').textContent = econ.sticks;
+  const board = store.getHexBoard();
+  document.getElementById('steps-count').textContent = board ? board.pendingSteps : 0;
 }
 
 store.subscribe('economy:changed', updateStatusBar);
+store.subscribe('hexboard:changed', updateStatusBar);
 updateStatusBar();
 
 const container = document.getElementById('view-container');

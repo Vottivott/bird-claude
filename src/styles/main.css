@@ -54,7 +54,8 @@ html, body {
 .status-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   height: var(--status-height);
   padding: 0 16px;
   padding-top: env(safe-area-inset-top);
@@ -64,16 +65,26 @@ html, body {
   z-index: 100;
 }
 
+.status-bar__left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .app-title {
   font-weight: 700;
   font-size: 18px;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-bar__right {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .currency {
@@ -91,6 +102,14 @@ html, body {
 }
 
 .currency--sticks .currency__icon {
+  filter:
+    drop-shadow(1px 0 0 #F5EDD4)
+    drop-shadow(-1px 0 0 #F5EDD4)
+    drop-shadow(0 1px 0 #F5EDD4)
+    drop-shadow(0 -1px 0 #F5EDD4);
+}
+
+.currency--steps .currency__icon {
   filter:
     drop-shadow(1px 0 0 #F5EDD4)
     drop-shadow(-1px 0 0 #F5EDD4)
@@ -145,5 +164,31 @@ html, body {
   #app {
     border-left: 1px solid rgba(0,0,0,0.06);
     border-right: 1px solid rgba(0,0,0,0.06);
+  }
+}
+
+@media (max-width: 390px) {
+  .status-bar {
+    gap: 8px;
+    padding: 0 10px;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .status-bar__right {
+    gap: 6px;
+  }
+
+  .currency {
+    gap: 3px;
+    font-size: 13px;
+  }
+
+  .currency__icon {
+    width: 18px;
+    height: 18px;
   }
 }
