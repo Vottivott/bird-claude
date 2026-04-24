@@ -14,6 +14,10 @@ export function plantAsset(file) {
   return assetUrl(`/assets/plants_prepared_named_transparent/${file}`);
 }
 
+export function hexAsset(file) {
+  return assetUrl(`/assets/hex_sprites_aligned/${file}`);
+}
+
 export function nestAsset(file) {
   return assetUrl(`/assets/nest_progression/${file}`);
 }

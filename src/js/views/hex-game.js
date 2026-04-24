@@ -4,129 +4,227 @@ import { getPlantAtHex, waterPlant, collectPlant, plantSeed } from '../models/pl
 import { SHOP_ITEMS, PLANT_OPTIONS, WATER_OPTIONS, canAfford, buyShopItem, buyWater } from '../models/economy.js';
 import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
-import { namedAsset, plantAsset } from '../utils/assets.js';
+import { namedAsset, plantAsset, hexAsset } from '../utils/assets.js';
 import { getPlantOption } from '../models/economy.js';
 
 const HEX_SIZE = 40;
-const SQRT3 = Math.sqrt(3);
 
-function hexToPixel(q, r) {
-  const x = HEX_SIZE * (3 / 2 * q);
-  const y = HEX_SIZE * (SQRT3 / 2 * q + SQRT3 * r) * 0.85;
-  return { x, y };
+const OFFSETS_KEY = 'crowrun_hex_offsets';
+const DEFAULT_OFFSETS = {
+  stepX: 60,
+  stepY: 29.4,
+  rowHeight: 58.8,
+  tileW: 96,
+  tileH: 90.2,
+};
+
+function isHexEditorUrlEnabled() {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('hexEditor') ?? params.get('editor');
+  if (!raw) return false;
+  return ['1', 'true', 'yes', 'on', 'hex'].includes(raw.trim().toLowerCase());
 }
 
-function drawHex(ctx, cx, cy, size, state, type, content) {
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 180) * (60 * i - 30);
-    const x = cx + size * Math.cos(angle);
-    const y = cy + size * Math.sin(angle) * 0.85;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+function isHexEditorEnabled() {
+  return isHexEditorUrlEnabled() || !!localStorage.getItem('crowrun_hex_editor');
+}
+
+function getOffsets() {
+  try {
+    const stored = localStorage.getItem(OFFSETS_KEY);
+    if (stored) return { ...DEFAULT_OFFSETS, ...JSON.parse(stored) };
+  } catch {}
+  return { ...DEFAULT_OFFSETS };
+}
+
+function saveOffsets(o) {
+  localStorage.setItem(OFFSETS_KEY, JSON.stringify(o));
+}
+
+const HEX_TILES = {
+  grass_empty: '01_grass_hex_empty.png',
+  dirt_empty: '02_dirt_hex_empty.png',
+  dirt_seed: '03_dirt_hex_seed.png',
+  dirt_sprout: '04_dirt_hex_sprout.png',
+  dirt_plant: '05_dirt_hex_plant.png',
+  grass_flowers: '06_grass_hex_flowers.png',
+  shop_blue: '08_grass_hex_shop_blue_can.png',
+  shop_copper: '09_grass_hex_shop_copper_can.png',
+  shop_gold: '10_grass_hex_shop_gold_can.png',
+};
+
+function loadTileImages() {
+  const images = {};
+  const promises = [];
+  for (const [key, file] of Object.entries(HEX_TILES)) {
+    const img = new Image();
+    img.src = hexAsset(file);
+    images[key] = img;
+    promises.push(new Promise(resolve => { img.onload = resolve; img.onerror = resolve; }));
   }
-  ctx.closePath();
+  return { images, ready: Promise.all(promises) };
+}
+
+function hexToPixel(q, r) {
+  const o = getOffsets();
+  return {
+    x: q * o.stepX,
+    y: q * o.stepY + r * o.rowHeight,
+  };
+}
+
+function getTileKey(hex, state) {
+  if (state === 'hidden') return 'grass_empty';
+
+  const type = hex.type;
+  if (type === 'shop') {
+    const tier = hex.shopTier || 0;
+    return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
+  }
+  if (type === 'soil') return 'dirt_empty';
+  if (type === 'plant') {
+    const plant = getPlantAtHex(hex.id);
+    if (plant && plant.ready) return 'dirt_plant';
+    if (plant) return 'dirt_sprout';
+    return 'dirt_seed';
+  }
+  if (hex.revealed) return 'grass_flowers';
+  return 'grass_empty';
+}
+
+function drawHex(ctx, cx, cy, images, hex, state) {
+  const o = getOffsets();
+  const tileKey = getTileKey(hex, state);
+  const img = images[tileKey];
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+  }
 
   if (state === 'hidden') {
-    ctx.fillStyle = '#E0DCD0';
-    ctx.fill();
-    ctx.strokeStyle = '#C8C4B8';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // Draw ?
-    ctx.fillStyle = '#AAA';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('?', cx, cy);
-  } else if (state === 'revealed') {
-    let fillColor = '#F0F1F4';
-    if (type === 'shop') fillColor = '#FFE4C4';
-    else if (type === 'soil') fillColor = '#D4E8C4';
-    else if (type === 'plant') fillColor = '#E4F0D4';
-    else if (type === 'start') fillColor = '#E8E4FF';
-
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-    ctx.strokeStyle = '#C8C4B8';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    if (type === 'shop') {
-      ctx.fillStyle = '#A0785A';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('SHOP', cx, cy);
-    } else if (type === 'soil') {
-      ctx.fillStyle = '#6FB870';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PLANT', cx, cy);
-    } else if (type === 'plant') {
-      ctx.fillStyle = '#4A8A4A';
-      ctx.font = '18px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('\u{1F331}', cx, cy);
-    } else if (content) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 11px sans-serif';
-      if (content.seeds > 0 && content.sticks > 0) {
-        ctx.fillStyle = '#C4A030';
-        ctx.fillText(`${content.seeds}\u{1F33E}`, cx, cy - 6);
-        ctx.fillStyle = '#8A6B50';
-        ctx.fillText(`${content.sticks}\u{1FAB5}`, cx, cy + 7);
-      } else if (content.seeds > 0) {
-        ctx.fillStyle = '#C4A030';
-        ctx.fillText(`${content.seeds}\u{1F33E}`, cx, cy);
-      } else if (content.sticks > 0) {
-        ctx.fillStyle = '#8A6B50';
-        ctx.fillText(`${content.sticks}\u{1FAB5}`, cx, cy);
-      } else {
-        ctx.fillStyle = '#C8C4B8';
-        ctx.font = '14px sans-serif';
-        ctx.fillText('\u2713', cx, cy);
-      }
-    } else if (type === 'start') {
-      ctx.fillStyle = '#C8C4B8';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('\u2713', cx, cy);
-    }
   } else if (state === 'current') {
-    ctx.fillStyle = '#8A9AAD';
-    ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      const x = cx + HEX_SIZE * 1.05 * Math.cos(angle);
+      const y = cy + HEX_SIZE * 1.05 * Math.sin(angle) * 0.85;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
     ctx.strokeStyle = '#5E6B7A';
     ctx.lineWidth = 3;
     ctx.stroke();
   } else if (state === 'reachable') {
-    ctx.fillStyle = '#F0F1F4';
-    ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      const x = cx + HEX_SIZE * 1.05 * Math.cos(angle);
+      const y = cy + HEX_SIZE * 1.05 * Math.sin(angle) * 0.85;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
     ctx.strokeStyle = '#D4A830';
     ctx.lineWidth = 2.5;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    let label = '?';
-    if (type === 'shop') label = 'SHOP';
-    else if (type === 'soil') label = 'PLANT';
-    else if (type === 'plant') label = '\u{1F331}';
-
-    ctx.fillStyle = type === 'shop' ? '#A0785A' : type === 'soil' ? '#6FB870' : '#AAA';
-    ctx.font = type === 'plant' ? '18px sans-serif' : 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, cx, cy);
   }
+}
+
+function createEditor(renderFn, { onClose } = {}) {
+  const panel = document.createElement('div');
+  panel.id = 'hex-editor';
+  panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;z-index:9999;padding:10px 12px;box-shadow:0 -2px 12px rgba(0,0,0,0.25);font-size:12px;max-height:50vh;overflow-y:auto';
+
+  const o = getOffsets();
+
+  const params = [
+    { key: 'stepX', label: 'Step X (right dx)', min: 20, max: 140, step: 0.5 },
+    { key: 'stepY', label: 'Step Y (right dy)', min: -60, max: 80, step: 0.5 },
+    { key: 'rowHeight', label: 'Row Height (r dy)', min: 10, max: 120, step: 0.5 },
+    { key: 'tileW', label: 'Tile Width', min: 40, max: 220, step: 1 },
+    { key: 'tileH', label: 'Tile Height', min: 40, max: 220, step: 1 },
+  ];
+
+  let html = '<div style="font-weight:700;margin-bottom:6px">Hex Placement Editor</div>';
+  html += '<div style="display:grid;grid-template-columns:110px 1fr 50px;gap:4px 8px;align-items:center">';
+  for (const p of params) {
+    html += `<label>${p.label}</label>`;
+    html += `<input type="range" id="hex-ed-${p.key}" min="${p.min}" max="${p.max}" step="${p.step}" value="${o[p.key]}">`;
+    html += `<span id="hex-ed-val-${p.key}" style="text-align:right;font-family:monospace">${o[p.key]}</span>`;
+  }
+  html += '</div>';
+
+  html += '<div style="margin-top:6px;font-size:11px;color:#666">';
+  html += '<span id="hex-ed-dirs"></span>';
+  html += '</div>';
+
+  html += '<div style="margin-top:8px;display:flex;gap:8px">';
+  html += '<button id="hex-ed-reset" style="padding:4px 12px;font-size:12px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer">Reset</button>';
+  html += '<button id="hex-ed-copy" style="padding:4px 12px;font-size:12px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer">Copy JSON</button>';
+  html += '<button id="hex-ed-close" style="padding:4px 12px;font-size:12px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer;margin-left:auto">Close</button>';
+  html += '</div>';
+
+  panel.innerHTML = html;
+  document.body.appendChild(panel);
+
+  function updateDirs() {
+    const cur = getOffsets();
+    const el = panel.querySelector('#hex-ed-dirs');
+    el.textContent = `Right: (${cur.stepX}, ${cur.stepY})  Right-Up: (${cur.stepX}, ${(cur.stepY - cur.rowHeight).toFixed(1)})  Right-Down: (${cur.stepX}, ${(cur.stepY + cur.rowHeight).toFixed(1)})`;
+  }
+  updateDirs();
+
+  for (const p of params) {
+    const input = panel.querySelector(`#hex-ed-${p.key}`);
+    const valSpan = panel.querySelector(`#hex-ed-val-${p.key}`);
+    input.addEventListener('input', () => {
+      const cur = getOffsets();
+      cur[p.key] = parseFloat(input.value);
+      saveOffsets(cur);
+      valSpan.textContent = input.value;
+      updateDirs();
+      renderFn();
+    });
+  }
+
+  panel.querySelector('#hex-ed-reset').addEventListener('click', () => {
+    localStorage.removeItem(OFFSETS_KEY);
+    for (const p of params) {
+      const input = panel.querySelector(`#hex-ed-${p.key}`);
+      const valSpan = panel.querySelector(`#hex-ed-val-${p.key}`);
+      input.value = DEFAULT_OFFSETS[p.key];
+      valSpan.textContent = DEFAULT_OFFSETS[p.key];
+    }
+    updateDirs();
+    renderFn();
+  });
+
+  panel.querySelector('#hex-ed-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(JSON.stringify(getOffsets(), null, 2));
+  });
+
+  panel.querySelector('#hex-ed-close').addEventListener('click', () => {
+    panel.remove();
+    if (typeof onClose === 'function') {
+      onClose();
+      return;
+    }
+    localStorage.removeItem('crowrun_hex_editor');
+  });
+
+  return panel;
 }
 
 export function mount(container) {
   const board = getBoard();
   const econ = store.getEconomy();
+  const { images, ready: tilesReady } = loadTileImages();
 
   const div = document.createElement('div');
   div.className = 'view hex-game';
@@ -186,7 +284,6 @@ export function mount(container) {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Camera offset: center on player
     const playerPos = hexToPixel(currentHex.q, currentHex.r);
     const offsetX = w / 2 - playerPos.x;
     const offsetY = h / 2 - playerPos.y;
@@ -194,27 +291,10 @@ export function mount(container) {
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
-    // Draw connections
+    // Compute positions and sort by Y for depth ordering (back-to-front)
+    const visible = [];
     for (const hex of board.hexes) {
       const pos = hexToPixel(hex.q, hex.r);
-      for (const connId of hex.connections) {
-        const connHex = board.hexes.find(h => h.id === connId);
-        if (connHex) {
-          const connPos = hexToPixel(connHex.q, connHex.r);
-          ctx.beginPath();
-          ctx.moveTo(pos.x, pos.y);
-          ctx.lineTo(connPos.x, connPos.y);
-          ctx.strokeStyle = '#DDD';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      }
-    }
-
-    // Draw hexes
-    for (const hex of board.hexes) {
-      const pos = hexToPixel(hex.q, hex.r);
-
       if (Math.abs(pos.x - playerPos.x) > w && Math.abs(pos.y - playerPos.y) > h) continue;
 
       let state = 'hidden';
@@ -222,23 +302,64 @@ export function mount(container) {
       else if (reachable.has(hex.id)) state = 'reachable';
       else if (hex.revealed) state = 'revealed';
 
-      drawHex(ctx, pos.x, pos.y, HEX_SIZE, state, hex.type, hex.content);
+      visible.push({ hex, pos, state });
     }
 
-    // Draw crow on current hex
-    const crowPos = hexToPixel(currentHex.q, currentHex.r);
-    ctx.fillStyle = '#3A3A3A';
-    ctx.font = '22px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('\u{1F426}\u{200D}\u{2B1B}', crowPos.x, crowPos.y);
+    visible.sort((a, b) => a.pos.y - b.pos.y);
+
+    for (const { hex, pos, state } of visible) {
+      drawHex(ctx, pos.x, pos.y, images, hex, state);
+    }
 
     ctx.restore();
 
     div.querySelector('#steps-left').textContent = board.pendingSteps;
   }
 
-  render();
+  tilesReady.then(() => render());
+
+  // Secret editor: enable via localStorage.setItem('crowrun_hex_editor', '1')
+  let editorPanel = null;
+  let reopenButton = null;
+
+  function removeReopenButton() {
+    if (reopenButton) {
+      reopenButton.remove();
+      reopenButton = null;
+    }
+  }
+
+  function showReopenButton() {
+    if (!isHexEditorEnabled() || editorPanel || reopenButton) return;
+    reopenButton = document.createElement('button');
+    reopenButton.type = 'button';
+    reopenButton.textContent = 'Open editor';
+    reopenButton.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:9998;padding:8px 12px;border:1px solid #ccc;border-radius:999px;background:white;box-shadow:0 2px 10px rgba(0,0,0,0.18);font-size:12px;font-weight:600;cursor:pointer';
+    reopenButton.addEventListener('click', () => {
+      localStorage.setItem('crowrun_hex_editor', '1');
+      removeReopenButton();
+      openEditor();
+    });
+    document.body.appendChild(reopenButton);
+  }
+
+  function openEditor() {
+    if (editorPanel) return;
+    removeReopenButton();
+    editorPanel = createEditor(render, {
+      onClose: () => {
+        editorPanel = null;
+        if (!isHexEditorUrlEnabled()) {
+          localStorage.removeItem('crowrun_hex_editor');
+        }
+        showReopenButton();
+      },
+    });
+  }
+
+  if (isHexEditorEnabled()) {
+    openEditor();
+  }
 
   canvas.addEventListener('click', async (e) => {
     const board = getBoard();
@@ -258,7 +379,6 @@ export function mount(container) {
     const worldX = x - offsetX;
     const worldY = y - offsetY;
 
-    // Find which reachable hex was clicked
     const reachable = currentHex.connections;
     let clickedHex = null;
     let minDist = Infinity;
@@ -283,7 +403,6 @@ export function mount(container) {
 
     const { hex, content } = result;
 
-    // Show what was found
     if (content && (content.seeds > 0 || content.sticks > 0)) {
       let crowSprite = '52_happy1.png';
 
@@ -308,9 +427,8 @@ export function mount(container) {
       });
     }
 
-    // Handle special hex types
     if (hex.type === 'shop') {
-      await handleShop();
+      await handleShop(hex.shopTier || 0);
     } else if (hex.type === 'soil') {
       await handleSoil(hex.id);
     } else if (hex.type === 'plant') {
@@ -320,13 +438,10 @@ export function mount(container) {
     render();
   });
 
-  async function handleShop() {
+  async function handleShop(shopTier) {
     return new Promise((resolve) => {
       const econ = store.getEconomy();
-      const availableWater = [WATER_OPTIONS[0]];
-      const rng = Math.random();
-      if (rng < 0.4) availableWater.push(WATER_OPTIONS[1]);
-      if (rng < 0.15) availableWater.push(WATER_OPTIONS[2]);
+      const availableWater = WATER_OPTIONS.slice(0, shopTier + 1);
 
       const html = `
         <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
@@ -413,7 +528,6 @@ export function mount(container) {
     const affordable = pool.filter(p => p.cost <= seeds * 1.5);
     const expensive = pool.filter(p => p.cost > seeds * 1.5);
 
-    // Seeded shuffle based on hex ID
     function seededShuffle(arr, seed) {
       const copy = [...arr];
       let s = seed;
@@ -429,25 +543,21 @@ export function mount(container) {
     const shuffledAffordable = seededShuffle(affordable, hexId * 7 + 31);
     const shuffledExpensive = seededShuffle(expensive.length > 0 ? expensive : pool.slice(-3), hexId * 13 + 47);
 
-    // Pick 2 affordable
     for (const p of shuffledAffordable) {
       if (picks.length >= 2) break;
       if (!picks.find(x => x.id === p.id)) picks.push(p);
     }
-    // If not enough affordable, fill from all
     if (picks.length < 2) {
       for (const p of seededShuffle(pool, hexId * 19 + 3)) {
         if (picks.length >= 2) break;
         if (!picks.find(x => x.id === p.id)) picks.push(p);
       }
     }
-    // Pick 1 expensive/aspirational
     for (const p of shuffledExpensive) {
       if (picks.length >= 3) break;
       if (!picks.find(x => x.id === p.id)) picks.push(p);
     }
 
-    // Sort by cost
     picks.sort((a, b) => a.cost - b.cost);
 
     return { picks, collectedTypes };
@@ -566,5 +676,7 @@ export function mount(container) {
 
   return () => {
     if (unsub) unsub();
+    if (editorPanel) editorPanel.remove();
+    removeReopenButton();
   };
 }

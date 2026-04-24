@@ -1,0 +1,11 @@
+01_grass_hex_empty.png size=(591, 555) original=(590, 470) hex_bbox=(0, 164, 590, 395) offset=(0,82)
+02_dirt_hex_empty.png size=(591, 555) original=(587, 479) hex_bbox=(0, 167, 587, 401) offset=(2,76)
+03_dirt_hex_seed.png size=(591, 555) original=(588, 478) hex_bbox=(0, 167, 588, 401) offset=(2,76)
+04_dirt_hex_sprout.png size=(591, 555) original=(544, 499) hex_bbox=(0, 174, 544, 426) offset=(24,51)
+05_dirt_hex_plant.png size=(591, 555) original=(528, 506) hex_bbox=(0, 177, 528, 435) offset=(32,42)
+06_grass_hex_flowers.png size=(591, 555) original=(590, 470) hex_bbox=(0, 164, 590, 395) offset=(0,82)
+07_grass_hex_chest.png size=(591, 555) original=(591, 470) hex_bbox=(0, 164, 591, 394) offset=(0,83)
+08_grass_hex_shop_blue_can.png size=(591, 555) original=(584, 552) hex_bbox=(0, 193, 584, 476) offset=(4,1)
+09_grass_hex_shop_copper_can.png size=(591, 555) original=(580, 553) hex_bbox=(0, 193, 580, 477) offset=(6,0)
+10_grass_hex_shop_gold_can.png size=(591, 555) original=(581, 551) hex_bbox=(0, 192, 581, 475) offset=(5,2)
+common_canvas=(591,555) common_hex_center=295.5 common_hex_bottom=477

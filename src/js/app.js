@@ -8,6 +8,25 @@ import { mount as mountHexGame } from './views/hex-game.js';
 import { mount as mountNest } from './views/nest-view.js';
 import { mount as mountWeight } from './views/weight.js';
 
+function applyHexEditorUrlFlags() {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('hexEditor') ?? params.get('editor');
+  if (!raw) return;
+
+  const value = raw.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on', 'hex'].includes(value)) {
+    localStorage.setItem('crowrun_hex_editor', '1');
+    if (!window.location.hash) {
+      window.location.hash = 'hex';
+    }
+    return;
+  }
+
+  if (['0', 'false', 'no', 'off'].includes(value)) {
+    localStorage.removeItem('crowrun_hex_editor');
+  }
+}
+
 registerView('home', mountHome);
 registerView('log', mountLogRun);
 registerView('records', mountRecords);
@@ -27,6 +46,8 @@ function updateStatusBar() {
 store.subscribe('economy:changed', updateStatusBar);
 store.subscribe('hexboard:changed', updateStatusBar);
 updateStatusBar();
+
+applyHexEditorUrlFlags();
 
 const container = document.getElementById('view-container');
 initRouter(container);

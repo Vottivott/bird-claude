@@ -1,6 +1,13 @@
 import * as store from '../store.js';
 import { createRNG, randomInt, randomChoice } from '../utils/random.js';
 
+function pickShopTier(rng) {
+  const r = rng();
+  if (r < 0.15) return 2;
+  if (r < 0.40) return 1;
+  return 0;
+}
+
 function extendBoard(board, count) {
   const rng = createRNG(board.boardSeed + board.hexes.length * 1013);
   let nextId = board.hexes.length;
@@ -34,6 +41,7 @@ function extendBoard(board, count) {
         id: nextId++,
         q: currentQ, r: -1,
         type,
+        shopTier: type === 'shop' ? pickShopTier(rng) : undefined,
         content: null,
         revealed: false,
         connections: [],
@@ -52,6 +60,7 @@ function extendBoard(board, count) {
         id: nextId++,
         q: currentQ, r: 1,
         type: type2,
+        shopTier: type2 === 'shop' ? pickShopTier(rng) : undefined,
         content: null,
         revealed: false,
         connections: [],
@@ -83,6 +92,7 @@ function extendBoard(board, count) {
         id: nextId++,
         q: currentQ, r,
         type,
+        shopTier: type === 'shop' ? pickShopTier(rng) : undefined,
         content: null,
         revealed: false,
         connections: [],
