@@ -92,10 +92,10 @@ html, body {
 
 .currency--sticks .currency__icon {
   filter:
-    drop-shadow(1px 0 0 #B89028)
-    drop-shadow(-1px 0 0 #B89028)
-    drop-shadow(0 1px 0 #B89028)
-    drop-shadow(0 -1px 0 #B89028);
+    drop-shadow(1px 0 0 #F5EDD4)
+    drop-shadow(-1px 0 0 #F5EDD4)
+    drop-shadow(0 1px 0 #F5EDD4)
+    drop-shadow(0 -1px 0 #F5EDD4);
 }
 
 .view-container {

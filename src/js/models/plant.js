@@ -22,6 +22,7 @@ export function plantSeed(plantOption, currentHexId) {
     plantType: plantOption.id,
     name: plantOption.name,
     cost: plantOption.cost,
+    image: plantOption.image,
     wateringsNeeded: plantOption.wateringsNeeded,
     wateringsGiven: 0,
     hexId: targetHexId,
@@ -54,7 +55,6 @@ export function waterPlant(plantId) {
   if (plant.wateringsGiven >= plant.wateringsNeeded) {
     plant.ready = true;
   } else {
-    // Push forward on the board
     const board = store.getHexBoard();
     const currentHex = board.hexes.find(h => h.id === plant.hexId);
     if (currentHex) {
@@ -89,7 +89,12 @@ export function collectPlant(plantId) {
   plant.collected = true;
 
   const nest = store.getNest();
-  nest.inventory.push({ itemId: plant.plantType, name: plant.name, type: 'plant' });
+  nest.inventory.push({
+    itemId: plant.plantType,
+    name: plant.name,
+    type: 'plant',
+    image: plant.image,
+  });
   store.setNest(nest);
 
   const board = store.getHexBoard();

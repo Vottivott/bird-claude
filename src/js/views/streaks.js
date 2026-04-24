@@ -2,6 +2,7 @@ import * as store from '../store.js';
 import { updateStreaks, getUpcomingRewards } from '../models/streak.js';
 import { toLocalDateString, getMonthDays, getFirstDayOfWeek, addDays, today } from '../utils/date.js';
 import { navigate } from '../router.js';
+import { namedAsset } from '../utils/assets.js';
 
 export function mount(container) {
   const streaks = updateStreaks();
@@ -22,7 +23,7 @@ export function mount(container) {
 
   div.innerHTML = `
     <div class="crow-display">
-      <img src="/assets/named_selection_borderless_8x_cleaned/${streaks.daily.current > 0 ? '56_streak_bonus.png' : '19_looking_at_user.png'}" alt="Crow">
+      <img src="${namedAsset(streaks.daily.current > 0 ? '56_streak_bonus.png' : '19_looking_at_user.png')}" alt="Crow">
     </div>
 
     ${streakTypes.map((st, idx) => {

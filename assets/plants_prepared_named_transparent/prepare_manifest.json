@@ -1,0 +1,249 @@
+[
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001071802.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/dandelion_seedhead.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      721,
+      999
+    ],
+    "removed_pixels": 737189,
+    "crop_bbox": [
+      142,
+      45,
+      863,
+      1044
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001117533.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/dandelion_flower.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      713,
+      990
+    ],
+    "removed_pixels": 773309,
+    "crop_bbox": [
+      142,
+      54,
+      855,
+      1044
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001160152.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/blue_violets.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      622,
+      1003
+    ],
+    "removed_pixels": 775656,
+    "crop_bbox": [
+      189,
+      49,
+      811,
+      1052
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001227303.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/white_anemone.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      552,
+      1004
+    ],
+    "removed_pixels": 902167,
+    "crop_bbox": [
+      232,
+      48,
+      784,
+      1052
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001273964.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/coltsfoot_flower.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      583,
+      1002
+    ],
+    "removed_pixels": 803296,
+    "crop_bbox": [
+      214,
+      50,
+      797,
+      1052
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001348799.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/lily_of_the_valley.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      579,
+      1016
+    ],
+    "removed_pixels": 847554,
+    "crop_bbox": [
+      222,
+      39,
+      801,
+      1055
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001439546.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/cornflower.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      530,
+      1024
+    ],
+    "removed_pixels": 943920,
+    "crop_bbox": [
+      238,
+      36,
+      768,
+      1060
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777001841109.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/wild_strawberry_single.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      693,
+      963
+    ],
+    "removed_pixels": 903526,
+    "crop_bbox": [
+      179,
+      82,
+      872,
+      1045
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777002757797.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/strawberry.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      864,
+      965
+    ],
+    "removed_pixels": 696475,
+    "crop_bbox": [
+      125,
+      79,
+      989,
+      1044
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777003010609.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/wild_strawberry_cluster.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      950,
+      981
+    ],
+    "removed_pixels": 604224,
+    "crop_bbox": [
+      0,
+      88,
+      950,
+      1069
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777003653924.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/blackberry.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      932,
+      1021
+    ],
+    "removed_pixels": 688959,
+    "crop_bbox": [
+      0,
+      48,
+      932,
+      1069
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777003935659.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/raspberries.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      876,
+      1021
+    ],
+    "removed_pixels": 637746,
+    "crop_bbox": [
+      68,
+      48,
+      944,
+      1069
+    ]
+  },
+  {
+    "input": "/data/workspace/genai/tmp/plants_zip_inspect/1777004410898.png",
+    "output": "/data/workspace/genai/output/plants_prepared/assets/iced_coffee_cup_plant.png",
+    "input_size": [
+      1008,
+      1069
+    ],
+    "output_size": [
+      553,
+      1018
+    ],
+    "removed_pixels": 862638,
+    "crop_bbox": [
+      231,
+      35,
+      784,
+      1053
+    ]
+  }
+]

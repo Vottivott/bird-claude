@@ -4,7 +4,8 @@ import { getPlantAtHex, waterPlant, collectPlant, plantSeed } from '../models/pl
 import { SHOP_ITEMS, PLANT_OPTIONS, WATER_OPTIONS, canAfford, buyShopItem, buyWater } from '../models/economy.js';
 import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
-import { namedAsset } from '../utils/assets.js';
+import { namedAsset, plantAsset } from '../utils/assets.js';
+import { getPlantOption } from '../models/economy.js';
 
 const HEX_SIZE = 40;
 const SQRT3 = Math.sqrt(3);
@@ -15,7 +16,7 @@ function hexToPixel(q, r) {
   return { x, y };
 }
 
-function drawHex(ctx, cx, cy, size, state, type) {
+function drawHex(ctx, cx, cy, size, state, type, content) {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 180) * (60 * i - 30);
@@ -68,6 +69,32 @@ function drawHex(ctx, cx, cy, size, state, type) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('\u{1F331}', cx, cy);
+    } else if (content) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 11px sans-serif';
+      if (content.seeds > 0 && content.sticks > 0) {
+        ctx.fillStyle = '#C4A030';
+        ctx.fillText(`${content.seeds}\u{1F33E}`, cx, cy - 6);
+        ctx.fillStyle = '#8A6B50';
+        ctx.fillText(`${content.sticks}\u{1FAB5}`, cx, cy + 7);
+      } else if (content.seeds > 0) {
+        ctx.fillStyle = '#C4A030';
+        ctx.fillText(`${content.seeds}\u{1F33E}`, cx, cy);
+      } else if (content.sticks > 0) {
+        ctx.fillStyle = '#8A6B50';
+        ctx.fillText(`${content.sticks}\u{1FAB5}`, cx, cy);
+      } else {
+        ctx.fillStyle = '#C8C4B8';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('\u2713', cx, cy);
+      }
+    } else if (type === 'start') {
+      ctx.fillStyle = '#C8C4B8';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('\u2713', cx, cy);
     }
   } else if (state === 'current') {
     ctx.fillStyle = '#8A9AAD';
@@ -195,7 +222,7 @@ export function mount(container) {
       else if (reachable.has(hex.id)) state = 'reachable';
       else if (hex.revealed) state = 'revealed';
 
-      drawHex(ctx, pos.x, pos.y, HEX_SIZE, state, hex.type);
+      drawHex(ctx, pos.x, pos.y, HEX_SIZE, state, hex.type, hex.content);
     }
 
     // Draw crow on current hex
@@ -259,21 +286,16 @@ export function mount(container) {
     // Show what was found
     if (content && (content.seeds > 0 || content.sticks > 0)) {
       let crowSprite = '52_happy1.png';
-      let details = [];
 
-      if (content.seeds > 0) {
-        crowSprite = content.seeds > 1 ? '33_find_seeds.png' : '31_find_seed.png';
-        details.push(`+${content.seeds} seed${content.seeds > 1 ? 's' : ''}`);
-      }
       if (content.sticks > 0) {
         crowSprite = content.sticks > 1 ? '41_find_sticks.png' : '40_find_stick.png';
-        details.push(`+${content.sticks} stick${content.sticks > 1 ? 's' : ''}`);
+      } else if (content.seeds > 0) {
+        crowSprite = content.seeds > 1 ? '33_find_seeds.png' : '31_find_seed.png';
       }
 
       await showRewardPopup({
         crowSprite,
         title: content.sticks > 0 ? 'Found sticks!' : 'Found seeds!',
-        details,
         seedsAmount: content.seeds > 0 ? content.seeds : undefined,
         sticksAmount: content.sticks > 0 ? content.sticks : undefined,
       });
@@ -294,11 +316,10 @@ export function mount(container) {
   async function handleShop() {
     return new Promise((resolve) => {
       const econ = store.getEconomy();
-      const waterCount = store.getWaterCount();
-      const rng = Math.random();
       const availableWater = [WATER_OPTIONS[0]];
-      if (rng > 0.5) availableWater.push(WATER_OPTIONS[1]);
-      if (rng > 0.8) availableWater.push(WATER_OPTIONS[2]);
+      const rng = Math.random();
+      if (rng < 0.4) availableWater.push(WATER_OPTIONS[1]);
+      if (rng < 0.15) availableWater.push(WATER_OPTIONS[2]);
 
       const html = `
         <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
@@ -371,9 +392,64 @@ export function mount(container) {
     });
   }
 
+  function pickSoilOptions(hexId) {
+    const plants = store.getPlants();
+    const collectedTypes = new Set(plants.filter(p => p.collected).map(p => p.plantType));
+    const inProgressTypes = new Set(plants.filter(p => !p.collected).map(p => p.plantType));
+    const econ = store.getEconomy();
+    const seeds = econ.seeds;
+
+    const available = PLANT_OPTIONS.filter(p => !inProgressTypes.has(p.id));
+    const fallback = PLANT_OPTIONS;
+    const pool = available.length >= 3 ? available : fallback;
+
+    const affordable = pool.filter(p => p.cost <= seeds * 1.5);
+    const expensive = pool.filter(p => p.cost > seeds * 1.5);
+
+    // Seeded shuffle based on hex ID
+    function seededShuffle(arr, seed) {
+      const copy = [...arr];
+      let s = seed;
+      for (let i = copy.length - 1; i > 0; i--) {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        const j = s % (i + 1);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    const picks = [];
+    const shuffledAffordable = seededShuffle(affordable, hexId * 7 + 31);
+    const shuffledExpensive = seededShuffle(expensive.length > 0 ? expensive : pool.slice(-3), hexId * 13 + 47);
+
+    // Pick 2 affordable
+    for (const p of shuffledAffordable) {
+      if (picks.length >= 2) break;
+      if (!picks.find(x => x.id === p.id)) picks.push(p);
+    }
+    // If not enough affordable, fill from all
+    if (picks.length < 2) {
+      for (const p of seededShuffle(pool, hexId * 19 + 3)) {
+        if (picks.length >= 2) break;
+        if (!picks.find(x => x.id === p.id)) picks.push(p);
+      }
+    }
+    // Pick 1 expensive/aspirational
+    for (const p of shuffledExpensive) {
+      if (picks.length >= 3) break;
+      if (!picks.find(x => x.id === p.id)) picks.push(p);
+    }
+
+    // Sort by cost
+    picks.sort((a, b) => a.cost - b.cost);
+
+    return { picks, collectedTypes };
+  }
+
   async function handleSoil(hexId) {
     return new Promise((resolve) => {
       const econ = store.getEconomy();
+      const { picks, collectedTypes } = pickSoilOptions(hexId);
 
       const html = `
         <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
@@ -382,15 +458,24 @@ export function mount(container) {
         </h3>
         <p style="text-align:center;color:var(--text-light);margin-bottom:16px">You have <strong>${econ.seeds}</strong> seeds</p>
 
-        ${PLANT_OPTIONS.map(p => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border-radius:var(--radius-xs);margin-bottom:8px">
-            <div>
-              <div style="font-weight:600">${p.name}</div>
-              <div style="font-size:12px;color:var(--text-light)">Needs ${p.wateringsNeeded} watering${p.wateringsNeeded > 1 ? 's' : ''}</div>
+        ${picks.map(p => {
+          const revealed = collectedTypes.has(p.id);
+          const imgStyle = revealed
+            ? 'width:56px;height:56px;object-fit:contain;flex-shrink:0'
+            : 'width:56px;height:56px;object-fit:contain;flex-shrink:0;filter:brightness(0)';
+          return `
+          <div style="display:flex;align-items:center;padding:12px;background:var(--bg);border-radius:var(--radius-xs);margin-bottom:8px;gap:12px">
+            <img src="${plantAsset(p.image)}" style="${imgStyle}">
+            <div style="flex:1;min-width:0">
+              ${revealed
+                ? `<div style="font-weight:600;font-size:14px">${p.name}</div>`
+                : `<div style="font-weight:600;font-size:14px;color:var(--text-muted)">???</div>`
+              }
+              <div style="font-size:12px;color:var(--text-light)">${p.wateringsNeeded} watering${p.wateringsNeeded > 1 ? 's' : ''}</div>
             </div>
-            <button class="btn btn--accent plant-btn" data-plant-id="${p.id}" ${!canAfford(p.cost) ? 'disabled style="opacity:0.5"' : ''} style="padding:8px 16px;font-size:14px">${p.cost} seeds</button>
-          </div>
-        `).join('')}
+            <button class="btn btn--accent plant-btn" data-plant-id="${p.id}" ${!canAfford(p.cost) ? 'disabled style="opacity:0.5"' : ''} style="padding:8px 14px;font-size:14px;flex-shrink:0">${p.cost}</button>
+          </div>`;
+        }).join('')}
 
         <button class="btn btn--ghost" style="width:100%;margin-top:12px" id="soil-close">Skip</button>
       `;
@@ -409,7 +494,8 @@ export function mount(container) {
           await showRewardPopup({
             crowSprite: '35_planting_2.png',
             title: 'Planted!',
-            details: `${option.name} planted! Find it further on the path.`,
+            details: 'Find it further on the path!',
+            extraImage: plantAsset(option.image),
           });
 
           modal.close();
@@ -428,35 +514,42 @@ export function mount(container) {
     const plant = getPlantAtHex(hexId);
     if (!plant) return;
 
+    const plantImg = plant.image ? plantAsset(plant.image) : null;
+
     if (plant.ready) {
       const collected = collectPlant(plant.id);
       if (collected) {
         await showRewardPopup({
           crowSprite: '54_very_happy.png',
-          title: 'Plant Ready!',
-          details: `Collected ${collected.name}! Check your nest inventory.`,
+          title: `${collected.name} Ready!`,
+          details: 'Collected! Place it in your nest.',
+          extraImage: plantImg,
         });
       }
     } else {
       const waterCount = store.getWaterCount();
-      const watered = waterCount > 0 ? waterPlant(plant.id) : null;
+      const remaining = plant.wateringsNeeded - plant.wateringsGiven;
 
-      if (watered) {
-        const crowSprite = plant.wateringsNeeded > 2 ? '48_watering_large.png' : '37_watering_small.png';
-        await showRewardPopup({
-          crowSprite,
-          title: 'Watered!',
-          details: watered.ready
-            ? `${watered.name} is now ready to collect!`
-            : `${watered.name} needs ${watered.wateringsNeeded - watered.wateringsGiven} more watering${watered.wateringsNeeded - watered.wateringsGiven > 1 ? 's' : ''}. Find it further ahead!`,
-        });
+      if (waterCount > 0) {
+        const watered = waterPlant(plant.id);
+        if (watered) {
+          const crowSprite = remaining > 2 ? '48_watering_large.png' : '37_watering_small.png';
+          const left = watered.wateringsNeeded - watered.wateringsGiven;
+          await showRewardPopup({
+            crowSprite,
+            title: 'Watered!',
+            details: watered.ready
+              ? `${watered.name} is ready to collect!`
+              : `${watered.name} needs ${left} more watering${left > 1 ? 's' : ''}. Find it further ahead!`,
+            extraImage: plantImg,
+          });
+        }
       } else {
         await showRewardPopup({
           crowSprite: '37_watering_small.png',
           title: 'Needs Water!',
-          details: waterCount === 0
-            ? `This ${plant.name} needs water! Buy some at a shop.`
-            : `This ${plant.name} needs ${plant.wateringsNeeded - plant.wateringsGiven} more watering${plant.wateringsNeeded - plant.wateringsGiven > 1 ? 's' : ''}.`,
+          details: `${plant.name} needs ${remaining} watering${remaining > 1 ? 's' : ''}. Buy water at a shop!`,
+          extraImage: plantImg,
         });
       }
     }

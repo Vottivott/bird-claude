@@ -12,6 +12,9 @@
     "chart.js": "^4.4.0"
   },
   "devDependencies": {
+    "apng-js": "^1.1.5",
+    "sharp": "^0.34.5",
+    "upng-js": "^2.1.0",
     "vite": "^8.0.10"
   }
 }

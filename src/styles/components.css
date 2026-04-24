@@ -207,6 +207,23 @@
   margin: 12px 0;
 }
 
+.reward-popup__reward {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 6px 0;
+}
+
+.reward-popup__reward-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

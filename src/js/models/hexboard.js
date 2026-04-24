@@ -118,8 +118,7 @@ export function generateBoard() {
   return board;
 }
 
-export function revealHex(hexId) {
-  const board = store.getHexBoard();
+function revealHexOnBoard(board, hexId) {
   const hex = board.hexes.find(h => h.id === hexId);
   if (!hex || hex.revealed) return null;
 
@@ -138,8 +137,14 @@ export function revealHex(hexId) {
   }
 
   hex.revealed = true;
-  store.setHexBoard(board);
   return hex.content;
+}
+
+export function revealHex(hexId) {
+  const board = store.getHexBoard();
+  const content = revealHexOnBoard(board, hexId);
+  if (content !== null) store.setHexBoard(board);
+  return content;
 }
 
 export function movePlayer(targetHexId) {
@@ -153,7 +158,7 @@ export function movePlayer(targetHexId) {
   board.pendingSteps--;
   board.totalHexesVisited++;
 
-  const content = revealHex(targetHexId);
+  const content = revealHexOnBoard(board, targetHexId);
 
   if (content) {
     if (content.seeds > 0) store.addSeeds(content.seeds, 'hex_seeds');

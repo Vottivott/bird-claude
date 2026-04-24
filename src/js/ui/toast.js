@@ -1,3 +1,5 @@
+import { namedAsset, assetUrl } from '../utils/assets.js';
+
 export function showToast(message, duration = 2500) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -30,7 +32,7 @@ export function showToast(message, duration = 2500) {
 
 export function showRewardPopup(options) {
   return new Promise((resolve) => {
-    const { crowSprite, title, details, seedsAmount, sticksAmount, onDismiss } = options;
+    const { crowSprite, title, details, seedsAmount, sticksAmount, stepsAmount, extraImage, onDismiss } = options;
 
     const overlay = document.createElement('div');
     overlay.className = 'reward-popup';
@@ -46,11 +48,13 @@ export function showRewardPopup(options) {
 
     overlay.innerHTML = `
       <div class="reward-popup__content">
-        <img class="reward-popup__crow" src="/assets/named_selection_borderless_8x_cleaned/${crowSprite}" alt="">
+        <img class="reward-popup__crow" src="${namedAsset(crowSprite)}" alt="">
         <div class="reward-popup__title">${title}</div>
+        ${extraImage ? `<img src="${extraImage}" style="max-height:80px;object-fit:contain;margin:8px auto;display:block" alt="">` : ''}
         ${detailsHtml}
-        ${seedsAmount ? `<div class="reward-popup__seeds">+${seedsAmount} seeds</div>` : ''}
-        ${sticksAmount ? `<div class="reward-popup__seeds" style="color:var(--brown)">+${sticksAmount} sticks</div>` : ''}
+        ${seedsAmount ? `<div class="reward-popup__reward"><img src="${namedAsset('seeds.png')}" class="reward-popup__reward-icon">+${seedsAmount} seeds</div>` : ''}
+        ${sticksAmount ? `<div class="reward-popup__reward" style="color:var(--brown)"><img src="${namedAsset('stick_pile.png')}" class="reward-popup__reward-icon">+${sticksAmount} sticks</div>` : ''}
+        ${stepsAmount ? `<div class="reward-popup__reward" style="color:var(--primary)"><img src="${assetUrl('/assets/bird_footsteps.png')}" class="reward-popup__reward-icon">+${stepsAmount} steps</div>` : ''}
         <button class="btn btn--primary" style="margin-top:16px;width:100%">Continue</button>
       </div>
     `;

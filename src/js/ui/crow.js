@@ -1,3 +1,5 @@
+import { namedAsset } from '../utils/assets.js';
+
 const SPRITES = {
   neutral: '1_neutral_pose_towards_right.png',
   looking_right: '16_looking_right_away_from_user.png',
@@ -30,16 +32,14 @@ const ANIMATIONS = {
   walking: 'walking_transparent_loop.png',
 };
 
-const BASE_PATH = '/assets/named_selection_borderless_8x_cleaned/';
-
 export function getCrowSpriteSrc(name) {
   const file = SPRITES[name] || SPRITES.neutral;
-  return BASE_PATH + file;
+  return namedAsset(file);
 }
 
 export function getCrowAnimationSrc(name) {
   const file = ANIMATIONS[name];
-  return file ? BASE_PATH + file : null;
+  return file ? namedAsset(file) : null;
 }
 
 export function createCrowImage(spriteName, className = '') {

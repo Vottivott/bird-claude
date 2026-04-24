@@ -1,0 +1,266 @@
+[
+  {
+    "file": "16_looking_right_away_from_user.png",
+    "size": [
+      438,
+      628
+    ],
+    "changed_pixels": 160268
+  },
+  {
+    "file": "19_looking_at_user.png",
+    "size": [
+      402,
+      623
+    ],
+    "changed_pixels": 134477
+  },
+  {
+    "file": "1_neutral_pose_towards_right.png",
+    "size": [
+      574,
+      615
+    ],
+    "changed_pixels": 151156
+  },
+  {
+    "file": "31_find_seed.png",
+    "size": [
+      634,
+      653
+    ],
+    "changed_pixels": 166579
+  },
+  {
+    "file": "33_find_seeds.png",
+    "size": [
+      684,
+      606
+    ],
+    "changed_pixels": 139932
+  },
+  {
+    "file": "34_planting_1.png",
+    "size": [
+      671,
+      634
+    ],
+    "changed_pixels": 176467
+  },
+  {
+    "file": "35_planting_2.png",
+    "size": [
+      642,
+      635
+    ],
+    "changed_pixels": 157545
+  },
+  {
+    "file": "37_watering_small.png",
+    "size": [
+      666,
+      608
+    ],
+    "changed_pixels": 177692
+  },
+  {
+    "file": "38_pointing_to_the_right.png",
+    "size": [
+      648,
+      644
+    ],
+    "changed_pixels": 236837
+  },
+  {
+    "file": "40_find_stick.png",
+    "size": [
+      653,
+      645
+    ],
+    "changed_pixels": 170595
+  },
+  {
+    "file": "41_find_sticks.png",
+    "size": [
+      651,
+      607
+    ],
+    "changed_pixels": 158222
+  },
+  {
+    "file": "45_planting_3.png",
+    "size": [
+      675,
+      622
+    ],
+    "changed_pixels": 167936
+  },
+  {
+    "file": "46_planting_4.png",
+    "size": [
+      663,
+      627
+    ],
+    "changed_pixels": 156523
+  },
+  {
+    "file": "47_watering_medium.png",
+    "size": [
+      684,
+      637
+    ],
+    "changed_pixels": 150221
+  },
+  {
+    "file": "48_watering_large.png",
+    "size": [
+      688,
+      658
+    ],
+    "changed_pixels": 147783
+  },
+  {
+    "file": "50_at_shop.png",
+    "size": [
+      696,
+      634
+    ],
+    "changed_pixels": 213959
+  },
+  {
+    "file": "51_speaking.png",
+    "size": [
+      886,
+      989
+    ],
+    "changed_pixels": 289574
+  },
+  {
+    "file": "52_happy1.png",
+    "size": [
+      663,
+      897
+    ],
+    "changed_pixels": 259750
+  },
+  {
+    "file": "53_happy2.png",
+    "size": [
+      676,
+      902
+    ],
+    "changed_pixels": 260470
+  },
+  {
+    "file": "54_very_happy.png",
+    "size": [
+      832,
+      969
+    ],
+    "changed_pixels": 289761
+  },
+  {
+    "file": "55_new_record.png",
+    "size": [
+      1016,
+      994
+    ],
+    "changed_pixels": 287330
+  },
+  {
+    "file": "56_streak_bonus.png",
+    "size": [
+      938,
+      980
+    ],
+    "changed_pixels": 258473
+  },
+  {
+    "file": "57_log_run.png",
+    "size": [
+      910,
+      907
+    ],
+    "changed_pixels": 281319
+  },
+  {
+    "file": "58_log_weight.png",
+    "size": [
+      879,
+      905
+    ],
+    "changed_pixels": 286642
+  },
+  {
+    "file": "running_transparent_loop.png",
+    "size": [
+      733,
+      623
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "seeds.png",
+    "size": [
+      507,
+      474
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "stick_pair.png",
+    "size": [
+      693,
+      370
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "stick_pile.png",
+    "size": [
+      784,
+      521
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "walking_transparent_loop.png",
+    "size": [
+      661,
+      677
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "watering_can_blue.png",
+    "size": [
+      595,
+      395
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "watering_can_copper.png",
+    "size": [
+      697,
+      558
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  },
+  {
+    "file": "watering_can_gold.png",
+    "size": [
+      775,
+      636
+    ],
+    "changed_pixels": 0,
+    "copied": true
+  }
+]

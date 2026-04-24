@@ -1,7 +1,9 @@
 import * as store from '../store.js';
 import { getTotalRuns, getTotalDistance } from '../models/run.js';
 import { updateStreaks, getUpcomingRewards } from '../models/streak.js';
+import { getMaxAffordableLevel, getCurrentNestInfo, NEST_LEVELS } from '../models/nest.js';
 import { navigate } from '../router.js';
+import { namedAsset } from '../utils/assets.js';
 
 export function mount(container) {
   const streaks = updateStreaks();
@@ -13,11 +15,16 @@ export function mount(container) {
   const div = document.createElement('div');
   div.className = 'view';
 
+  const nestInfo = getCurrentNestInfo();
+  const maxAffordable = getMaxAffordableLevel();
+  const nestUpgradeAvailable = maxAffordable > nestInfo.level;
+  const upgradeName = nestUpgradeAvailable ? NEST_LEVELS[Math.min(maxAffordable, NEST_LEVELS.length - 1)].name : '';
+
   const greeting = getGreeting();
 
   div.innerHTML = `
     <div class="home-crow">
-      <img src="/assets/named_selection_borderless_8x_cleaned/${totalRuns > 0 ? '52_happy1.png' : '19_looking_at_user.png'}" alt="Crow">
+      <img src="${namedAsset(totalRuns > 0 ? '52_happy1.png' : '19_looking_at_user.png')}" alt="Crow">
     </div>
     <div class="home-greeting">${greeting}</div>
 
@@ -45,6 +52,19 @@ export function mount(container) {
       <button class="btn btn--ghost" id="btn-log-weight">Log Weight</button>
     </div>
 
+    ${nestUpgradeAvailable ? `
+      <div class="card" style="border:2px solid var(--accent);cursor:pointer" id="nest-upgrade-banner">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="${namedAsset('54_very_happy.png')}" style="width:48px;height:48px;object-fit:contain">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px">Nest Upgrade Available!</div>
+            <div style="font-size:13px;color:var(--text-light)">You can upgrade to <strong>${upgradeName}</strong></div>
+          </div>
+          <div style="font-size:20px;color:var(--accent)">&#8250;</div>
+        </div>
+      </div>
+    ` : ''}
+
     ${upcoming.length > 0 ? `
       <div class="card">
         <div class="card__title">Upcoming Rewards</div>
@@ -65,7 +85,7 @@ export function mount(container) {
 
     ${totalRuns === 0 ? `
       <div class="card card--accent" style="text-align:center;padding:24px">
-        <img src="/assets/named_selection_borderless_8x_cleaned/38_pointing_to_the_right.png"
+        <img src="${namedAsset('38_pointing_to_the_right.png')}"
              alt="" style="max-height:100px;margin-bottom:12px">
         <div style="font-size:16px;font-weight:600">Welcome to Crow Run!</div>
         <div style="font-size:14px;opacity:0.9;margin-top:4px">Log your first run to start earning seeds and explore the map!</div>
@@ -101,6 +121,8 @@ export function mount(container) {
   div.querySelector('#btn-log-run').addEventListener('click', () => navigate('log'));
   div.querySelector('#btn-log-weight').addEventListener('click', () => navigate('weight'));
   div.querySelector('#btn-streaks').addEventListener('click', () => navigate('streaks'));
+  const nestBanner = div.querySelector('#nest-upgrade-banner');
+  if (nestBanner) nestBanner.addEventListener('click', () => navigate('nest'));
 }
 
 function getGreeting() {

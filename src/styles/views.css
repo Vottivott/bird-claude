@@ -68,6 +68,7 @@
   object-fit: contain;
 }
 
+
 /* Records View */
 .records-chart {
   background: var(--bg-card);

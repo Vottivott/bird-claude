@@ -1,6 +1,7 @@
 import * as store from '../store.js';
 import { NEST_LEVELS, getMaxAffordableLevel, getNextUnlock, getCurrentNestInfo, setNestLevel, placeFurniture } from '../models/nest.js';
-import { namedAsset } from '../utils/assets.js';
+import { getPlantOption } from '../models/economy.js';
+import { namedAsset, plantAsset } from '../utils/assets.js';
 
 const NEST_SCENES = [
   { bg: 'linear-gradient(180deg, #87CEEB 0%, #98D8A0 50%, #7BC47E 100%)', ground: '#7BC47E', label: 'Ground Nest' },
@@ -9,16 +10,12 @@ const NEST_SCENES = [
   { bg: 'linear-gradient(180deg, #6BAACC 0%, #87CEEB 30%, #A0785A 60%, #7BC47E 100%)', ground: '#7BC47E', label: 'Grand Nest' },
 ];
 
-const FURNITURE_DISPLAY = {
-  swimming_pool: { label: 'Swimming Pool', color: '#5BC0DE', w: 50, h: 30 },
-  sunchair: { label: 'Sunchair', color: '#D4A830', w: 30, h: 30 },
-  daisy: { label: 'Daisy', color: '#FFE066', w: 20, h: 30 },
-  tulip: { label: 'Tulip', color: '#FF6B8A', w: 20, h: 30 },
-  sunflower: { label: 'Sunflower', color: '#FFD700', w: 25, h: 35 },
-  rose: { label: 'Rose', color: '#FF4444', w: 20, h: 30 },
-  orchid: { label: 'Orchid', color: '#DA70D6', w: 25, h: 30 },
-  bonsai: { label: 'Bonsai', color: '#228B22', w: 30, h: 35 },
-};
+function getItemImage(item) {
+  if (item.type === 'plant' && item.image) return plantAsset(item.image);
+  const option = getPlantOption(item.itemId);
+  if (option) return plantAsset(option.image);
+  return null;
+}
 
 export function mount(container) {
   const nestInfo = getCurrentNestInfo();
@@ -33,7 +30,7 @@ export function mount(container) {
 
   div.innerHTML = `
     <div class="nest-scene" id="nest-scene" style="background:${scene.bg};border:2px solid #ddd">
-      <div style="position:relative;height:250px;overflow:hidden" id="nest-inner">
+      <div style="position:relative;height:280px;overflow:hidden" id="nest-inner">
         <!-- Nest platform -->
         <div style="position:absolute;bottom:${nestInfo.level > 0 ? '40%' : '10%'};left:50%;transform:translateX(-50%);width:120px;height:40px;background:#8B6F47;border-radius:50%;border:3px solid #6B5230"></div>
         <!-- Crow -->
@@ -43,10 +40,10 @@ export function mount(container) {
         <!-- Furniture -->
         <div id="furniture-display"></div>
         ${nestInfo.level > 0 ? `
-          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;background:#8B6F47;height:${nestInfo.level > 0 ? '40%' : '0'};border-radius:4px"></div>
-          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground};border-radius:0"></div>
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;background:#8B6F47;height:40%;border-radius:4px"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground}"></div>
         ` : `
-          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground};border-radius:0"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:${scene.ground}"></div>
         `}
       </div>
     </div>
@@ -90,13 +87,34 @@ export function mount(container) {
 
     ${nest.inventory.length > 0 ? `
       <div class="card">
-        <div class="card__title">Inventory (tap to place)</div>
+        <div class="card__title">Inventory (tap to place in nest)</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px" id="inventory-list">
-          ${nest.inventory.map((item, idx) => `
-            <button class="btn btn--ghost inventory-item" data-idx="${idx}" style="padding:8px 12px;font-size:13px">
-              ${item.name}
-            </button>
-          `).join('')}
+          ${nest.inventory.map((item, idx) => {
+            const img = getItemImage(item);
+            return `
+              <button class="inventory-item" data-idx="${idx}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:2px solid #e0e0e0;border-radius:var(--radius-xs);background:var(--bg);cursor:pointer;width:80px">
+                ${img ? `<img src="${img}" style="width:48px;height:48px;object-fit:contain">` : `<div style="width:48px;height:48px;background:#ddd;border-radius:4px"></div>`}
+                <span style="font-size:11px;text-align:center;line-height:1.2">${item.name}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${nest.furniture.length > 0 ? `
+      <div class="card">
+        <div class="card__title">Placed Items (tap to move)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="placed-list">
+          ${nest.furniture.map((item, idx) => {
+            const img = getItemImage(item);
+            return `
+              <button class="placed-item" data-idx="${idx}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:2px solid var(--green);border-radius:var(--radius-xs);background:var(--bg);cursor:pointer;width:80px">
+                ${img ? `<img src="${img}" style="width:48px;height:48px;object-fit:contain">` : `<div style="width:48px;height:48px;background:#ddd;border-radius:4px"></div>`}
+                <span style="font-size:11px;text-align:center;line-height:1.2">${item.name}</span>
+              </button>
+            `;
+          }).join('')}
         </div>
       </div>
     ` : ''}
@@ -111,30 +129,32 @@ export function mount(container) {
 
   container.appendChild(div);
 
-  // Render placed furniture
+  // Render placed furniture in the scene
   const furnitureDisplay = div.querySelector('#furniture-display');
   if (furnitureDisplay && nest.furniture) {
     nest.furniture.forEach(item => {
-      const info = FURNITURE_DISPLAY[item.itemId] || { label: item.name, color: '#999', w: 25, h: 25 };
+      const img = getItemImage(item);
       const el = document.createElement('div');
+      const baseBottom = nestInfo.level > 0 ? 40 : 10;
       el.style.cssText = `
         position:absolute;
         left:${item.position.x * 100}%;
-        bottom:${(nestInfo.level > 0 ? 40 : 10) + 5 + item.position.y * 20}%;
-        width:${info.w}px;
-        height:${info.h}px;
-        background:${info.color};
-        border-radius:4px;
+        bottom:${baseBottom + 5 + item.position.y * 20}%;
         transform:translateX(-50%);
-        box-shadow:0 2px 4px rgba(0,0,0,0.2);
         display:flex;
         align-items:center;
         justify-content:center;
-        font-size:10px;
-        color:white;
-        font-weight:600;
       `;
-      el.title = info.label;
+      if (img) {
+        el.innerHTML = `<img src="${img}" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3))">`;
+      } else {
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.background = '#999';
+        el.style.borderRadius = '4px';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      }
+      el.title = item.name;
       furnitureDisplay.appendChild(el);
     });
   }
@@ -144,19 +164,36 @@ export function mount(container) {
   if (upgradeBtn) {
     upgradeBtn.addEventListener('click', () => {
       setNestLevel(maxLevel);
+      container.innerHTML = '';
       mount(container);
     });
   }
 
-  // Inventory placement
+  // Inventory placement — tap to place at random position
   div.querySelectorAll('.inventory-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx);
       const item = nest.inventory[idx];
       if (!item) return;
-      const x = 0.2 + Math.random() * 0.6;
+      const x = 0.15 + Math.random() * 0.7;
       const y = Math.random() * 0.8;
       placeFurniture(item.itemId, x, y);
+      container.innerHTML = '';
+      mount(container);
+    });
+  });
+
+  // Move placed furniture — tap to pick up and reposition
+  div.querySelectorAll('.placed-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const nest = store.getNest();
+      const item = nest.furniture[idx];
+      if (!item) return;
+      // Move back to inventory, then re-place at new random position
+      nest.furniture.splice(idx, 1);
+      nest.inventory.push({ itemId: item.itemId, name: item.name, type: item.type, image: item.image });
+      store.setNest(nest);
       container.innerHTML = '';
       mount(container);
     });
