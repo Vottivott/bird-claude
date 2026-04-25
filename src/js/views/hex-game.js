@@ -4,6 +4,7 @@ import { getPlantAtHex, waterPlant, collectPlant, plantSeed, neglectPlant } from
 import { SHOP_ITEMS, PLANT_OPTIONS, WATER_OPTIONS, canAfford, buyShopItem, buyWater } from '../models/economy.js';
 import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
+import { navigate } from '../router.js';
 import { namedAsset, plantAsset, hexAsset } from '../utils/assets.js';
 import { getPlantOption } from '../models/economy.js';
 
@@ -53,6 +54,7 @@ const HEX_TILES = {
   dirt_plant: '05_dirt_hex_plant.png',
   grass_flowers: '06_grass_hex_flowers.png',
   chest: '07_grass_hex_chest.png',
+  wizened: '11_wizened.png',
   shop_blue: '08_grass_hex_shop_blue_can.png',
   shop_copper: '09_grass_hex_shop_copper_can.png',
   shop_gold: '10_grass_hex_shop_gold_can.png',
@@ -86,6 +88,8 @@ function getTileKey(hex, state) {
       return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
     }
     if (type === 'chest') return 'chest';
+    if (type === 'flowers') return 'grass_flowers';
+    if (type === 'wizened') return 'wizened';
     if (type === 'soil') return 'dirt_empty';
     return 'grass_empty';
   }
@@ -95,6 +99,8 @@ function getTileKey(hex, state) {
     return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
   }
   if (type === 'chest') return 'chest';
+  if (type === 'flowers') return 'grass_flowers';
+  if (type === 'wizened') return 'wizened';
   if (type === 'soil') return 'dirt_empty';
   if (type === 'plant') {
     const plant = getPlantAtHex(hex.id);
@@ -821,7 +827,8 @@ export function mount(container) {
 
         const camX = fromPos.x + (toPos.x - fromPos.x) * ease;
         const camY = fromPos.y + (toPos.y - fromPos.y) * ease;
-        renderAt({ x: camX, y: camY });
+        crowWorldPos = { x: camX, y: camY };
+        renderAt(crowWorldPos);
         positionCrow(fromPos.x, fromPos.y + crowYOffset(fromHex));
 
         const w = canvas.width / window.devicePixelRatio;
@@ -847,7 +854,7 @@ export function mount(container) {
       requestAnimationFrame(tick);
     });
 
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 800));
 
     await new Promise(resolve => {
       const duration = 600;
@@ -859,7 +866,8 @@ export function mount(container) {
         const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         const camX = toPos.x + (playerPos.x - toPos.x) * ease;
         const camY = toPos.y + (playerPos.y - toPos.y) * ease;
-        renderAt({ x: camX, y: camY });
+        crowWorldPos = { x: camX, y: camY };
+        renderAt(crowWorldPos);
         positionCrow(playerPos.x, playerPos.y + crowYOffset(fromHex));
 
         if (t < 1) {
@@ -1091,6 +1099,9 @@ export function mount(container) {
           details: 'Collected! Place it in your nest.',
           extraImage: plantImg,
         });
+        render();
+        navigate('nest');
+        return;
       }
     } else {
       const waterCount = store.getWaterCount();

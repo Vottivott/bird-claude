@@ -18,14 +18,14 @@ function extendBoard(board, count) {
   const maxQ = Math.max(...board.hexes.map(h => h.q));
   let currentQ = maxQ;
 
-  let shopCounter = board._shopCounter || randomInt(rng, 3, 6);
-  let soilCounter = board._soilCounter || randomInt(rng, 4, 7);
+  let shopCounter = board._shopCounter || randomInt(rng, 2, 6);
+  let soilCounter = board._soilCounter || randomInt(rng, 2, 7);
   let chestCounter = board._chestCounter || randomInt(rng, 10, 20);
 
   for (let step = 0; step < count; step++) {
     currentQ++;
     const prevHexForBranch = board.hexes.find(h => h.id === prevIds[0]);
-    const isBranch = rng() < 0.25 && step > 1 && step < count - 2;
+    const isBranch = rng() < 0.35 && step > 1 && step < count - 2;
 
     let type = 'normal';
     shopCounter--;
@@ -36,10 +36,12 @@ function extendBoard(board, count) {
       chestCounter = randomInt(rng, 10, 20);
     } else if (shopCounter <= 0) {
       type = 'shop';
-      shopCounter = randomInt(rng, 3, 6);
+      shopCounter = randomInt(rng, 2, 6);
     } else if (soilCounter <= 0) {
       type = 'soil';
-      soilCounter = randomInt(rng, 4, 7);
+      soilCounter = randomInt(rng, 2, 7);
+    } else if (rng() < 0.2) {
+      type = 'flowers';
     }
 
     if (isBranch) {
@@ -59,10 +61,10 @@ function extendBoard(board, count) {
       let type2 = 'normal';
       if (type !== 'shop' && shopCounter <= 2) {
         type2 = 'shop';
-        shopCounter = randomInt(rng, 3, 6);
+        shopCounter = randomInt(rng, 2, 6);
       } else if (type !== 'soil' && soilCounter <= 2) {
         type2 = 'soil';
-        soilCounter = randomInt(rng, 4, 7);
+        soilCounter = randomInt(rng, 2, 7);
       }
 
       const hexB = {
@@ -142,8 +144,8 @@ export function generateBoard() {
     connections: [],
   };
   board.hexes.push(startHex);
-  board._shopCounter = randomInt(rng, 2, 3);
-  board._soilCounter = randomInt(rng, 4, 6);
+  board._shopCounter = randomInt(rng, 1, 2);
+  board._soilCounter = randomInt(rng, 3, 4);
   board._chestCounter = randomInt(rng, 10, 15);
 
   extendBoard(board, 50);
@@ -169,8 +171,15 @@ function revealHexOnBoard(board, hexId) {
 
   const rng = createRNG(board.boardSeed + hexId * 7919);
 
-  if (hex.type === 'normal' || hex.type === 'start') {
+  if (hex.type === 'normal' || hex.type === 'start' || hex.type === 'wizened') {
     const seeds = randomInt(rng, 1, 3);
+    let sticks = 0;
+    if (rng() < 0.33) {
+      sticks = rng() < 0.67 ? 1 : randomInt(rng, 3, 5);
+    }
+    hex.content = { seeds, sticks };
+  } else if (hex.type === 'flowers') {
+    const seeds = randomInt(rng, 5, 10);
     let sticks = 0;
     if (rng() < 0.33) {
       sticks = rng() < 0.67 ? 1 : randomInt(rng, 3, 5);

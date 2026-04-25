@@ -94,7 +94,7 @@ export function neglectPlant(plantId) {
     const board = store.getHexBoard();
     const hex = board.hexes.find(h => h.id === plant.hexId);
     if (hex) {
-      hex.type = 'normal';
+      hex.type = 'wizened';
       delete hex.plantData;
       store.setHexBoard(board);
     }
@@ -154,7 +154,7 @@ export function collectPlant(plantId) {
   const board = store.getHexBoard();
   const hex = board.hexes.find(h => h.id === plant.hexId);
   if (hex) {
-    hex.type = 'normal';
+    hex.type = 'soil';
     delete hex.plantData;
     store.setHexBoard(board);
   }
