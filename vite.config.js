@@ -84,6 +84,24 @@ function cacheBustPublicAssetsPlugin() {
         sw = sw.replaceAll('__PRECACHE_LIST__', JSON.stringify(precacheList, null, 2));
         fs.writeFileSync(swPath, sw);
       }
+
+      const distRoot = path.resolve(__dirname, 'dist');
+      const allAssets = ['/'];
+      function walkAll(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          const rel = '/' + path.relative(distRoot, full);
+          if (entry.isDirectory()) {
+            if (rel === '/assets/named_selection_borderless_8x_cleaned') continue;
+            walkAll(full);
+          } else {
+            if (entry.name === 'sw.js' || entry.name === 'asset-manifest.json') continue;
+            allAssets.push(rel);
+          }
+        }
+      }
+      walkAll(distRoot);
+      fs.writeFileSync(path.join(distRoot, 'asset-manifest.json'), JSON.stringify(allAssets));
     },
   };
 }

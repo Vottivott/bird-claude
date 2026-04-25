@@ -9,6 +9,7 @@ import { namedAsset, plantAsset, hexAsset } from '../utils/assets.js';
 import { getPlantOption } from '../models/economy.js';
 
 const HEX_SIZE = 40;
+const grownPlantHexes = new Set();
 
 const OFFSETS_KEY = 'crowrun_hex_offsets';
 const DEFAULT_OFFSETS = {
@@ -91,6 +92,14 @@ function getTileKey(hex, state) {
     if (type === 'flowers') return 'grass_flowers';
     if (type === 'wizened') return 'wizened';
     if (type === 'soil') return 'dirt_empty';
+    if (type === 'plant') {
+      if (grownPlantHexes.has(hex.id)) {
+        const plant = getPlantAtHex(hex.id);
+        if (plant && plant.ready) return 'dirt_plant';
+        if (plant) return 'dirt_sprout';
+      }
+      return 'dirt_seed';
+    }
     return 'grass_empty';
   }
 
@@ -854,6 +863,9 @@ export function mount(container) {
       requestAnimationFrame(tick);
     });
 
+    crowWorldPos = { x: toPos.x, y: toPos.y };
+    renderAt(crowWorldPos);
+    positionCrow(fromPos.x, fromPos.y + crowYOffset(fromHex));
     await new Promise(r => setTimeout(r, 800));
 
     await new Promise(resolve => {
@@ -881,6 +893,12 @@ export function mount(container) {
     });
 
     animating = false;
+
+    setTimeout(() => {
+      if (!div.isConnected) return;
+      grownPlantHexes.add(toHexId);
+      render();
+    }, 500);
   }
 
   async function handleShop(shopTier) {
