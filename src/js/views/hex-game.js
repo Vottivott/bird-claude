@@ -330,13 +330,14 @@ export function mount(container) {
   let animating = false;
   let crowAnimLoop = null;
 
-  let crowFrames = [];
-  let crowFrameIndex = 0;
-  let crowFrameTime = 0;
-  let lastFrameTs = 0;
+  let crowPlayer = null;
+  let crowReady = false;
   let crowW = 0, crowH = 0;
+  const crowOffscreen = document.createElement('canvas');
+  const crowOffCtx = crowOffscreen.getContext('2d');
 
-  function processShadow(imageData) {
+  function processShadow(ctx, w, h) {
+    const imageData = ctx.getImageData(0, 0, w, h);
     const d = imageData.data;
     for (let i = 0; i < d.length; i += 4) {
       const a = d[i + 3];
@@ -360,38 +361,25 @@ export function mount(container) {
       if (apng instanceof Error) throw apng;
       crowW = apng.width;
       crowH = apng.height;
-      const offscreen = document.createElement('canvas');
-      offscreen.width = crowW;
-      offscreen.height = crowH;
-      const offCtx = offscreen.getContext('2d');
-      for (const f of apng.frames) {
-        const bitmap = await createImageBitmap(f.imageData);
-        offCtx.clearRect(0, 0, crowW, crowH);
-        offCtx.drawImage(bitmap, f.left, f.top);
-        bitmap.close();
-        const imageData = processShadow(offCtx.getImageData(0, 0, crowW, crowH));
-        crowFrames.push({ imageData, delay: f.delay });
-      }
+      crowOffscreen.width = crowW;
+      crowOffscreen.height = crowH;
+      crowPlayer = await apng.getPlayer(crowOffCtx, false);
+      crowReady = true;
     } catch (e) {
-      console.warn('APNG parse failed, using static fallback:', e);
-    }
-    if (!crowFrames.length) {
+      console.warn('APNG player init failed, using static fallback:', e);
       const img = new Image();
       img.src = src;
       await new Promise(r => { img.onload = r; img.onerror = r; });
       if (img.naturalWidth) {
         crowW = img.naturalWidth;
         crowH = img.naturalHeight;
-        const offscreen = document.createElement('canvas');
-        offscreen.width = crowW;
-        offscreen.height = crowH;
-        const offCtx = offscreen.getContext('2d');
-        offCtx.drawImage(img, 0, 0);
-        const imageData = processShadow(offCtx.getImageData(0, 0, crowW, crowH));
-        crowFrames.push({ imageData, delay: 100 });
+        crowOffscreen.width = crowW;
+        crowOffscreen.height = crowH;
+        crowOffCtx.drawImage(img, 0, 0);
+        crowReady = true;
       }
     }
-    if (crowFrames.length) freezeCrow();
+    if (crowReady) freezeCrow();
   })();
 
   const waterTypes = [
@@ -419,23 +407,15 @@ export function mount(container) {
     updateWaterBar(econ);
   });
 
-  function renderCrowFrame(timestamp) {
-    if (!crowFrames.length) return;
-    if (timestamp && lastFrameTs) {
-      crowFrameTime += timestamp - lastFrameTs;
-      while (crowFrames[crowFrameIndex] && crowFrameTime >= crowFrames[crowFrameIndex].delay) {
-        crowFrameTime -= crowFrames[crowFrameIndex].delay;
-        crowFrameIndex = (crowFrameIndex + 1) % crowFrames.length;
-      }
-    }
-    lastFrameTs = timestamp || 0;
-
+  function copyToDisplay() {
+    if (!crowReady) return;
     if (crowDisplay.width !== crowW || crowDisplay.height !== crowH) {
       crowDisplay.width = crowW;
       crowDisplay.height = crowH;
       crowDisplay.style.width = (50 * crowW / crowH) + 'px';
     }
-    crowDisplayCtx.putImageData(crowFrames[crowFrameIndex].imageData, 0, 0);
+    const processed = processShadow(crowOffCtx, crowW, crowH);
+    crowDisplayCtx.putImageData(processed, 0, 0);
   }
 
   function freezeCrow() {
@@ -443,13 +423,15 @@ export function mount(container) {
       cancelAnimationFrame(crowAnimLoop);
       crowAnimLoop = null;
     }
-    renderCrowFrame();
+    if (crowPlayer) crowPlayer.pause();
+    copyToDisplay();
   }
 
   function unfreezeCrow() {
-    lastFrameTs = 0;
-    function loop(ts) {
-      renderCrowFrame(ts);
+    if (crowPlayer) crowPlayer.play();
+    if (crowAnimLoop) cancelAnimationFrame(crowAnimLoop);
+    function loop() {
+      copyToDisplay();
       crowAnimLoop = requestAnimationFrame(loop);
     }
     crowAnimLoop = requestAnimationFrame(loop);
@@ -508,8 +490,8 @@ export function mount(container) {
 
   function crowYOffset(hex) {
     if (!hex) return 0;
-    if (hex.type === 'shop') return 12;
-    if (getPlantAtHex(hex.id)) return 12;
+    if (hex.type === 'shop') return 28;
+    if (getPlantAtHex(hex.id)) return 28;
     return 0;
   }
 
