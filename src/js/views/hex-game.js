@@ -345,11 +345,11 @@ export function mount(container) {
       const a = d[i + 3];
       if (a === 0) continue;
       const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      if (a < 150 && lum > 160) { d[i + 3] = 0; continue; }
+      if (a < 150 && lum > 160) { d[i + 3] = Math.round(a * 0.3); continue; }
       const mx = Math.max(d[i], d[i + 1], d[i + 2]);
       const mn = Math.min(d[i], d[i + 1], d[i + 2]);
       const sat = mx > 0 ? (mx - mn) / mx : 0;
-      if (lum > 200 && sat < 0.15) d[i + 3] = 0;
+      if (lum > 200 && sat < 0.15) d[i + 3] = Math.round(a * 0.3);
     }
     crowDisplayCtx.putImageData(imageData, 0, 0);
   }
