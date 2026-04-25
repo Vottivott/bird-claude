@@ -52,6 +52,7 @@ const HEX_TILES = {
   dirt_sprout: '04_dirt_hex_sprout.png',
   dirt_plant: '05_dirt_hex_plant.png',
   grass_flowers: '06_grass_hex_flowers.png',
+  chest: '07_grass_hex_chest.png',
   shop_blue: '08_grass_hex_shop_blue_can.png',
   shop_copper: '09_grass_hex_shop_copper_can.png',
   shop_gold: '10_grass_hex_shop_gold_can.png',
@@ -84,6 +85,7 @@ function getTileKey(hex, state) {
       const tier = hex.shopTier || 0;
       return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
     }
+    if (type === 'chest') return 'chest';
     if (type === 'soil') return 'dirt_empty';
     return 'grass_empty';
   }
@@ -92,6 +94,7 @@ function getTileKey(hex, state) {
     const tier = hex.shopTier || 0;
     return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
   }
+  if (type === 'chest') return 'chest';
   if (type === 'soil') return 'dirt_empty';
   if (type === 'plant') {
     const plant = getPlantAtHex(hex.id);
@@ -747,7 +750,7 @@ export function mount(container) {
 
     const { hex, content } = result;
 
-    if (content && (content.seeds > 0 || content.sticks > 0)) {
+    if (content && (content.seeds > 0 || content.sticks > 0) && !content.chest) {
       let crowSprite = '52_happy1.png';
 
       if (content.sticks > 0) {
@@ -768,6 +771,14 @@ export function mount(container) {
         title,
         seedsAmount: content.seeds > 0 ? content.seeds : undefined,
         sticksAmount: content.sticks > 0 ? content.sticks : undefined,
+      });
+    }
+
+    if (hex.type === 'chest' && content && content.chest) {
+      await showRewardPopup({
+        crowSprite: '54_very_happy.png',
+        title: 'Treasure Chest!',
+        seedsAmount: content.seeds,
       });
     }
 

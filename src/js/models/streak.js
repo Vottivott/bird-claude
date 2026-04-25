@@ -104,16 +104,16 @@ export function checkAndAwardMilestones() {
     }
   }
 
-  // Weekly: milestone every 4 weeks
-  if (streaks.weekly.current >= 4) {
-    const milestone = Math.floor(streaks.weekly.current / 4) * 4;
+  // Weekly: milestone every 3 weeks
+  if (streaks.weekly.current >= 3) {
+    const milestone = Math.floor(streaks.weekly.current / 3) * 3;
     if (milestone > lma.weekly) {
-      const level = milestone / 4;
-      const prevLevel = lma.weekly / 4;
+      const level = milestone / 3;
+      const prevLevel = lma.weekly / 3;
       for (let l = prevLevel + 1; l <= level; l++) {
         const reward = 10 + 10 * l;
         store.addSeeds(reward, 'streak_weekly');
-        awarded.push({ type: 'weekly', weeks: l * 4, reward });
+        awarded.push({ type: 'weekly', weeks: l * 3, reward });
       }
       lma.weekly = milestone;
     }
@@ -161,9 +161,9 @@ export function getUpcomingRewards(streaks) {
   });
 
   const weeklyCurrent = streaks.weekly.current;
-  const weeklyNext = Math.ceil((weeklyCurrent + 1) / 4) * 4;
+  const weeklyNext = Math.ceil((weeklyCurrent + 1) / 3) * 3;
   const weeklyLeft = weeklyNext - weeklyCurrent;
-  const weeklyLevel = weeklyNext / 4;
+  const weeklyLevel = weeklyNext / 3;
   upcoming.push({
     type: 'Weekly',
     daysLeft: weeklyLeft * 7,

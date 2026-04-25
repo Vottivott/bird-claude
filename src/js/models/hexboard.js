@@ -20,6 +20,7 @@ function extendBoard(board, count) {
 
   let shopCounter = board._shopCounter || randomInt(rng, 3, 6);
   let soilCounter = board._soilCounter || randomInt(rng, 4, 7);
+  let chestCounter = board._chestCounter || randomInt(rng, 10, 20);
 
   for (let step = 0; step < count; step++) {
     currentQ++;
@@ -29,7 +30,11 @@ function extendBoard(board, count) {
     let type = 'normal';
     shopCounter--;
     soilCounter--;
-    if (shopCounter <= 0) {
+    chestCounter--;
+    if (chestCounter <= 0) {
+      type = 'chest';
+      chestCounter = randomInt(rng, 10, 20);
+    } else if (shopCounter <= 0) {
       type = 'shop';
       shopCounter = randomInt(rng, 3, 6);
     } else if (soilCounter <= 0) {
@@ -114,6 +119,7 @@ function extendBoard(board, count) {
 
   board._shopCounter = shopCounter;
   board._soilCounter = soilCounter;
+  board._chestCounter = chestCounter;
 }
 
 export function generateBoard() {
@@ -138,6 +144,7 @@ export function generateBoard() {
   board.hexes.push(startHex);
   board._shopCounter = randomInt(rng, 2, 3);
   board._soilCounter = randomInt(rng, 4, 6);
+  board._chestCounter = randomInt(rng, 10, 15);
 
   extendBoard(board, 50);
 
@@ -169,6 +176,9 @@ function revealHexOnBoard(board, hexId) {
       sticks = rng() < 0.67 ? 1 : randomInt(rng, 3, 5);
     }
     hex.content = { seeds, sticks };
+  } else if (hex.type === 'chest') {
+    const seeds = randomInt(rng, 20, 200);
+    hex.content = { seeds, sticks: 0, chest: true };
   } else if (hex.type === 'shop' || hex.type === 'soil') {
     const seeds = randomInt(rng, 1, 2);
     hex.content = { seeds, sticks: 0 };

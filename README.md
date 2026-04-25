@@ -27,3 +27,24 @@ This repository intentionally excludes:
 ## Layout
 - `assets/`: bird-related image assets only
 
+## Preview deploy helper
+
+To build, deploy the Firebase Hosting preview channel, verify the live bundles,
+and print the 4 cache-busted links:
+
+```bash
+npm run deploy:links
+```
+
+Optional flags:
+
+```bash
+node ./scripts/deploy-preview-links.mjs --channel birdclaude-20260425a --project viewmymodel
+node ./scripts/deploy-preview-links.mjs --json
+```
+
+The script prints:
+- preview link
+- editor link
+- reset link
+- reset + editor link
