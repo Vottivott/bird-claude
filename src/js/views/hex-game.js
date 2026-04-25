@@ -102,16 +102,31 @@ function getTileKey(hex, state) {
   return 'grass_empty';
 }
 
+const _tintCanvas = document.createElement('canvas');
+const _tintCtx = _tintCanvas.getContext('2d');
+
 function drawHex(ctx, cx, cy, images, hex, state) {
   const o = getOffsets();
   const tileKey = getTileKey(hex, state);
   const img = images[tileKey];
 
   if (img && img.complete && img.naturalWidth > 0) {
-    ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
     if (state === 'hidden' || state === 'reachable') {
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.fillRect(cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+      const dpr = window.devicePixelRatio || 1;
+      const tw = Math.ceil(o.tileW * dpr), th = Math.ceil(o.tileH * dpr);
+      if (_tintCanvas.width !== tw || _tintCanvas.height !== th) {
+        _tintCanvas.width = tw;
+        _tintCanvas.height = th;
+      }
+      _tintCtx.globalCompositeOperation = 'source-over';
+      _tintCtx.clearRect(0, 0, tw, th);
+      _tintCtx.drawImage(img, 0, 0, tw, th);
+      _tintCtx.globalCompositeOperation = 'source-atop';
+      _tintCtx.fillStyle = 'rgba(255,255,255,0.45)';
+      _tintCtx.fillRect(0, 0, tw, th);
+      ctx.drawImage(_tintCanvas, 0, 0, tw, th, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+    } else {
+      ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
     }
   }
 
@@ -242,13 +257,18 @@ export function mount(container) {
       <div class="hex-game__steps">
         Steps left: <span id="steps-left">${board.pendingSteps}</span>
       </div>
-      <div class="hex-game__steps" style="background:var(--accent);color:var(--text)">
-        <img src="${namedAsset('seeds.png')}" style="width:18px;height:18px;vertical-align:middle"> <span id="hex-seeds">${econ.seeds}</span>
+      <div class="hex-game__steps" style="background:var(--accent);color:var(--text);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600">
+        <img src="${namedAsset('watering_can_blue.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-blue">${econ.waterInventory.filter(w => w.size === 'Blue Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
+        <img src="${namedAsset('watering_can_copper.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-copper">${econ.waterInventory.filter(w => w.size === 'Copper Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
+        <img src="${namedAsset('watering_can_gold.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-gold">${econ.waterInventory.filter(w => w.size === 'Gold Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
       </div>
     </div>
     <div class="hex-game__canvas-container" style="position:relative">
       <canvas id="hex-canvas"></canvas>
-      <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="position:absolute;height:50px;object-fit:contain;pointer-events:none;transform:translate(-50%,-85%);z-index:10;mix-blend-mode:multiply">
+      <div id="crow-wrapper" style="position:absolute;pointer-events:none;transform:translate(-50%,-85%);z-index:10">
+        <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="height:50px;object-fit:contain;position:absolute;opacity:0">
+        <canvas id="crow-display" style="height:50px"></canvas>
+      </div>
     </div>
     ${board.pendingSteps === 0 ? `
       <div style="text-align:center;margin-top:8px;color:var(--text-light);font-size:14px">
@@ -278,28 +298,62 @@ export function mount(container) {
 
   resize();
 
+  const crowWrapper = div.querySelector('#crow-wrapper');
   const crowSprite = div.querySelector('#crow-sprite');
+  const crowDisplay = div.querySelector('#crow-display');
+  const crowDisplayCtx = crowDisplay.getContext('2d');
   let crowWorldPos = null;
   let animating = false;
+  let crowAnimLoop = null;
 
   let unsub = store.subscribe('economy:changed', (econ) => {
-    const el = div.querySelector('#hex-seeds');
-    if (el) el.textContent = econ.seeds;
+    const inv = econ.waterInventory;
+    const b = div.querySelector('#hex-water-blue');
+    const c = div.querySelector('#hex-water-copper');
+    const g = div.querySelector('#hex-water-gold');
+    if (b) b.textContent = inv.filter(w => w.size === 'Blue Watering Can').reduce((s, w) => s + w.usesLeft, 0);
+    if (c) c.textContent = inv.filter(w => w.size === 'Copper Watering Can').reduce((s, w) => s + w.usesLeft, 0);
+    if (g) g.textContent = inv.filter(w => w.size === 'Gold Watering Can').reduce((s, w) => s + w.usesLeft, 0);
   });
 
-  function freezeCrow() {
+  function renderCrowFrame() {
     const w = crowSprite.naturalWidth || crowSprite.width;
     const h = crowSprite.naturalHeight || crowSprite.height;
     if (!w || !h) return;
-    const freezeCanvas = document.createElement('canvas');
-    freezeCanvas.width = w;
-    freezeCanvas.height = h;
-    freezeCanvas.getContext('2d').drawImage(crowSprite, 0, 0, w, h);
-    try { crowSprite.src = freezeCanvas.toDataURL(); } catch (_) {}
+    if (crowDisplay.width !== w || crowDisplay.height !== h) {
+      crowDisplay.width = w;
+      crowDisplay.height = h;
+      crowDisplay.style.width = (50 * w / h) + 'px';
+    }
+    crowDisplayCtx.clearRect(0, 0, w, h);
+    crowDisplayCtx.drawImage(crowSprite, 0, 0, w, h);
+    const imageData = crowDisplayCtx.getImageData(0, 0, w, h);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
+      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if (lum > 180) d[i + 3] = 0;
+      else if (lum > 140) d[i + 3] = Math.round(d[i + 3] * (180 - lum) / 40);
+    }
+    crowDisplayCtx.putImageData(imageData, 0, 0);
+  }
+
+  function freezeCrow() {
+    if (crowAnimLoop) {
+      cancelAnimationFrame(crowAnimLoop);
+      crowAnimLoop = null;
+    }
+    renderCrowFrame();
+    crowSprite.style.visibility = 'hidden';
   }
 
   function unfreezeCrow() {
-    crowSprite.src = namedAsset('walking_hex.png');
+    crowSprite.style.visibility = 'visible';
+    function loop() {
+      renderCrowFrame();
+      crowAnimLoop = requestAnimationFrame(loop);
+    }
+    crowAnimLoop = requestAnimationFrame(loop);
   }
 
   function positionCrow(worldX, worldY) {
@@ -309,8 +363,8 @@ export function mount(container) {
     const camY = crowWorldPos ? crowWorldPos.y : worldY;
     const screenX = worldX - camX + w / 2;
     const screenY = worldY - camY + h / 2;
-    crowSprite.style.left = screenX + 'px';
-    crowSprite.style.top = screenY + 'px';
+    crowWrapper.style.left = screenX + 'px';
+    crowWrapper.style.top = screenY + 'px';
   }
 
   function renderAt(camPos) {
@@ -764,6 +818,7 @@ export function mount(container) {
 
   return () => {
     if (unsub) unsub();
+    if (crowAnimLoop) cancelAnimationFrame(crowAnimLoop);
     if (editorPanel) editorPanel.remove();
     removeReopenButton();
   };

@@ -6,12 +6,12 @@ export const SHOP_ITEMS = [
 ];
 
 export const PLANT_OPTIONS = [
-  { id: 'dandelion_seedhead', name: 'Dandelion Puff', cost: 200, wateringsNeeded: 1, image: 'dandelion_seedhead.png' },
-  { id: 'dandelion_flower', name: 'Dandelion', cost: 300, wateringsNeeded: 1, image: 'dandelion_flower.png' },
-  { id: 'coltsfoot_flower', name: 'Coltsfoot', cost: 400, wateringsNeeded: 1, image: 'coltsfoot_flower.png' },
-  { id: 'blue_violets', name: 'Blue Violets', cost: 500, wateringsNeeded: 2, image: 'blue_violets.png' },
-  { id: 'white_anemone', name: 'White Anemone', cost: 500, wateringsNeeded: 2, image: 'white_anemone.png' },
-  { id: 'cornflower', name: 'Cornflower', cost: 600, wateringsNeeded: 2, image: 'cornflower.png' },
+  { id: 'dandelion_seedhead', name: 'Dandelion Puff', cost: 50, wateringsNeeded: 1, image: 'dandelion_seedhead.png' },
+  { id: 'dandelion_flower', name: 'Dandelion', cost: 100, wateringsNeeded: 1, image: 'dandelion_flower.png' },
+  { id: 'coltsfoot_flower', name: 'Coltsfoot', cost: 150, wateringsNeeded: 1, image: 'coltsfoot_flower.png' },
+  { id: 'blue_violets', name: 'Blue Violets', cost: 200, wateringsNeeded: 2, image: 'blue_violets.png' },
+  { id: 'white_anemone', name: 'White Anemone', cost: 300, wateringsNeeded: 2, image: 'white_anemone.png' },
+  { id: 'cornflower', name: 'Cornflower', cost: 500, wateringsNeeded: 2, image: 'cornflower.png' },
   { id: 'lily_of_the_valley', name: 'Lily of the Valley', cost: 700, wateringsNeeded: 2, image: 'lily_of_the_valley.png' },
   { id: 'wild_strawberry_single', name: 'Wild Strawberry', cost: 1000, wateringsNeeded: 3, image: 'wild_strawberry_single.png' },
   { id: 'strawberry', name: 'Strawberry', cost: 1200, wateringsNeeded: 3, image: 'strawberry.png' },

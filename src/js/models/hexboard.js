@@ -18,28 +18,29 @@ function extendBoard(board, count) {
   const maxQ = Math.max(...board.hexes.map(h => h.q));
   let currentQ = maxQ;
 
-  let shopCounter = board._shopCounter || randomInt(rng, 4, 10);
-  let soilCounter = board._soilCounter || randomInt(rng, 5, 10);
+  let shopCounter = board._shopCounter || randomInt(rng, 3, 6);
+  let soilCounter = board._soilCounter || randomInt(rng, 4, 7);
 
   for (let step = 0; step < count; step++) {
     currentQ++;
     const prevHexForBranch = board.hexes.find(h => h.id === prevIds[0]);
-    const isBranch = rng() < 0.25 && step > 1 && step < count - 2 && prevHexForBranch && prevHexForBranch.r === 0;
+    const isBranch = rng() < 0.25 && step > 1 && step < count - 2;
 
     let type = 'normal';
     shopCounter--;
     soilCounter--;
     if (shopCounter <= 0) {
       type = 'shop';
-      shopCounter = randomInt(rng, 4, 10);
+      shopCounter = randomInt(rng, 3, 6);
     } else if (soilCounter <= 0) {
       type = 'soil';
-      soilCounter = randomInt(rng, 5, 10);
+      soilCounter = randomInt(rng, 4, 7);
     }
 
     if (isBranch) {
-      const rA = -1;
-      const rB = 1;
+      const baseR = prevHexForBranch ? prevHexForBranch.r : 0;
+      const rA = baseR;
+      const rB = baseR - 1;
       const hexA = {
         id: nextId++,
         q: currentQ, r: rA,
@@ -53,10 +54,10 @@ function extendBoard(board, count) {
       let type2 = 'normal';
       if (type !== 'shop' && shopCounter <= 2) {
         type2 = 'shop';
-        shopCounter = randomInt(rng, 4, 10);
+        shopCounter = randomInt(rng, 3, 6);
       } else if (type !== 'soil' && soilCounter <= 2) {
         type2 = 'soil';
-        soilCounter = randomInt(rng, 5, 10);
+        soilCounter = randomInt(rng, 4, 7);
       }
 
       const hexB = {
@@ -79,7 +80,7 @@ function extendBoard(board, count) {
       step++;
       const mergeHex = {
         id: nextId++,
-        q: currentQ, r: 0,
+        q: currentQ, r: baseR - 1,
         type: 'normal',
         content: null,
         revealed: false,
@@ -92,12 +93,7 @@ function extendBoard(board, count) {
     } else {
       const prevHex = board.hexes.find(h => h.id === prevIds[0]);
       const prevR = prevHex ? prevHex.r : 0;
-      let r;
-      if (prevR === 0) {
-        r = rng() < 0.15 ? (rng() < 0.5 ? -1 : 1) : 0;
-      } else {
-        r = rng() < 0.4 ? 0 : prevR;
-      }
+      const r = rng() < 0.2 ? prevR - 1 : prevR;
       const hex = {
         id: nextId++,
         q: currentQ, r,
@@ -140,8 +136,8 @@ export function generateBoard() {
     connections: [],
   };
   board.hexes.push(startHex);
-  board._shopCounter = randomInt(rng, 4, 5);
-  board._soilCounter = randomInt(rng, 6, 8);
+  board._shopCounter = randomInt(rng, 2, 3);
+  board._soilCounter = randomInt(rng, 4, 6);
 
   extendBoard(board, 50);
 
