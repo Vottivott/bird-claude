@@ -330,27 +330,11 @@ export function mount(container) {
   let animating = false;
   let crowAnimLoop = null;
 
-  let crowPlayer = null;
-  let crowReady = false;
+  let crowFrames = [];
+  let crowFrameIdx = 0;
+  let crowFrameTime = 0;
+  let crowLastTs = 0;
   let crowW = 0, crowH = 0;
-  const crowOffscreen = document.createElement('canvas');
-  const crowOffCtx = crowOffscreen.getContext('2d');
-
-  function processShadow(ctx, w, h) {
-    const imageData = ctx.getImageData(0, 0, w, h);
-    const d = imageData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const a = d[i + 3];
-      if (a === 0) continue;
-      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      if (a < 150 && lum > 160) { d[i + 3] = Math.round(a * 0.3); continue; }
-      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
-      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
-      const sat = mx > 0 ? (mx - mn) / mx : 0;
-      if (lum > 200 && sat < 0.15) d[i + 3] = Math.round(a * 0.3);
-    }
-    return imageData;
-  }
 
   (async function loadCrowFrames() {
     const src = namedAsset('walking_hex.png');
@@ -361,25 +345,24 @@ export function mount(container) {
       if (apng instanceof Error) throw apng;
       crowW = apng.width;
       crowH = apng.height;
-      crowOffscreen.width = crowW;
-      crowOffscreen.height = crowH;
-      crowPlayer = await apng.getPlayer(crowOffCtx, false);
-      crowReady = true;
+      await apng.createImages();
+      crowFrames = apng.frames
+        .filter(f => f.imageElement && f.imageElement.complete)
+        .map(f => ({ img: f.imageElement, delay: f.delay }));
     } catch (e) {
-      console.warn('APNG player init failed, using static fallback:', e);
+      console.warn('APNG parse failed:', e);
+    }
+    if (!crowFrames.length) {
       const img = new Image();
       img.src = src;
       await new Promise(r => { img.onload = r; img.onerror = r; });
       if (img.naturalWidth) {
         crowW = img.naturalWidth;
         crowH = img.naturalHeight;
-        crowOffscreen.width = crowW;
-        crowOffscreen.height = crowH;
-        crowOffCtx.drawImage(img, 0, 0);
-        crowReady = true;
+        crowFrames = [{ img, delay: 100 }];
       }
     }
-    if (crowReady) freezeCrow();
+    if (crowFrames.length) freezeCrow();
   })();
 
   const waterTypes = [
@@ -407,15 +390,39 @@ export function mount(container) {
     updateWaterBar(econ);
   });
 
-  function copyToDisplay() {
-    if (!crowReady) return;
+  function renderCrowFrame(timestamp) {
+    if (!crowFrames.length) return;
+    if (timestamp && crowLastTs) {
+      crowFrameTime += timestamp - crowLastTs;
+      const frame = crowFrames[crowFrameIdx];
+      while (frame && crowFrameTime >= frame.delay) {
+        crowFrameTime -= frame.delay;
+        crowFrameIdx = (crowFrameIdx + 1) % crowFrames.length;
+      }
+    }
+    crowLastTs = timestamp || 0;
+
     if (crowDisplay.width !== crowW || crowDisplay.height !== crowH) {
       crowDisplay.width = crowW;
       crowDisplay.height = crowH;
       crowDisplay.style.width = (50 * crowW / crowH) + 'px';
     }
-    const processed = processShadow(crowOffCtx, crowW, crowH);
-    crowDisplayCtx.putImageData(processed, 0, 0);
+    const f = crowFrames[crowFrameIdx];
+    crowDisplayCtx.clearRect(0, 0, crowW, crowH);
+    crowDisplayCtx.drawImage(f.img, 0, 0, crowW, crowH);
+    const imageData = crowDisplayCtx.getImageData(0, 0, crowW, crowH);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a === 0) continue;
+      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if (a < 150 && lum > 160) { d[i + 3] = Math.round(a * 0.3); continue; }
+      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
+      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      const sat = mx > 0 ? (mx - mn) / mx : 0;
+      if (lum > 200 && sat < 0.15) d[i + 3] = Math.round(a * 0.3);
+    }
+    crowDisplayCtx.putImageData(imageData, 0, 0);
   }
 
   function freezeCrow() {
@@ -423,15 +430,15 @@ export function mount(container) {
       cancelAnimationFrame(crowAnimLoop);
       crowAnimLoop = null;
     }
-    if (crowPlayer) crowPlayer.pause();
-    copyToDisplay();
+    renderCrowFrame();
   }
 
   function unfreezeCrow() {
-    if (crowPlayer) crowPlayer.play();
+    crowLastTs = 0;
+    crowFrameTime = 0;
     if (crowAnimLoop) cancelAnimationFrame(crowAnimLoop);
-    function loop() {
-      copyToDisplay();
+    function loop(ts) {
+      renderCrowFrame(ts);
       crowAnimLoop = requestAnimationFrame(loop);
     }
     crowAnimLoop = requestAnimationFrame(loop);
@@ -490,8 +497,8 @@ export function mount(container) {
 
   function crowYOffset(hex) {
     if (!hex) return 0;
-    if (hex.type === 'shop') return 28;
-    if (getPlantAtHex(hex.id)) return 28;
+    if (hex.type === 'shop') return 22;
+    if (getPlantAtHex(hex.id)) return 22;
     return 0;
   }
 
