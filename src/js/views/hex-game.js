@@ -257,10 +257,7 @@ export function mount(container) {
       <div class="hex-game__steps">
         Steps left: <span id="steps-left">${board.pendingSteps}</span>
       </div>
-      <div class="hex-game__steps" style="background:var(--accent);color:var(--text);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600">
-        <img src="${namedAsset('watering_can_blue.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-blue">${econ.waterInventory.filter(w => w.size === 'Blue Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
-        <img src="${namedAsset('watering_can_copper.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-copper">${econ.waterInventory.filter(w => w.size === 'Copper Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
-        <img src="${namedAsset('watering_can_gold.png')}" style="width:20px;height:20px;object-fit:contain"><span id="hex-water-gold">${econ.waterInventory.filter(w => w.size === 'Gold Watering Can').reduce((s, w) => s + w.usesLeft, 0)}</span>
+      <div id="hex-water-bar" class="hex-game__steps" style="background:var(--accent);color:var(--text);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600">
       </div>
     </div>
     <div class="hex-game__canvas-container" style="position:relative">
@@ -306,14 +303,29 @@ export function mount(container) {
   let animating = false;
   let crowAnimLoop = null;
 
+  const waterTypes = [
+    { key: 'Blue Watering Can', icon: 'watering_can_blue.png' },
+    { key: 'Copper Watering Can', icon: 'watering_can_copper.png' },
+    { key: 'Gold Watering Can', icon: 'watering_can_gold.png' },
+  ];
+
+  function updateWaterBar(econ) {
+    const bar = div.querySelector('#hex-water-bar');
+    if (!bar) return;
+    let html = '';
+    for (const { key, icon } of waterTypes) {
+      const count = econ.waterInventory.filter(w => w.size === key).reduce((s, w) => s + w.usesLeft, 0);
+      if (count > 0) {
+        html += `<img src="${namedAsset(icon)}" style="width:20px;height:20px;object-fit:contain">${count}`;
+      }
+    }
+    bar.innerHTML = html;
+  }
+
+  updateWaterBar(econ);
+
   let unsub = store.subscribe('economy:changed', (econ) => {
-    const inv = econ.waterInventory;
-    const b = div.querySelector('#hex-water-blue');
-    const c = div.querySelector('#hex-water-copper');
-    const g = div.querySelector('#hex-water-gold');
-    if (b) b.textContent = inv.filter(w => w.size === 'Blue Watering Can').reduce((s, w) => s + w.usesLeft, 0);
-    if (c) c.textContent = inv.filter(w => w.size === 'Copper Watering Can').reduce((s, w) => s + w.usesLeft, 0);
-    if (g) g.textContent = inv.filter(w => w.size === 'Gold Watering Can').reduce((s, w) => s + w.usesLeft, 0);
+    updateWaterBar(econ);
   });
 
   function renderCrowFrame() {
@@ -330,10 +342,14 @@ export function mount(container) {
     const imageData = crowDisplayCtx.getImageData(0, 0, w, h);
     const d = imageData.data;
     for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] === 0) continue;
+      const a = d[i + 3];
+      if (a === 0) continue;
       const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      if (lum > 180) d[i + 3] = 0;
-      else if (lum > 140) d[i + 3] = Math.round(d[i + 3] * (180 - lum) / 40);
+      if (a < 150 && lum > 160) { d[i + 3] = 0; continue; }
+      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
+      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      const sat = mx > 0 ? (mx - mn) / mx : 0;
+      if (lum > 200 && sat < 0.15) d[i + 3] = 0;
     }
     crowDisplayCtx.putImageData(imageData, 0, 0);
   }
