@@ -1,6 +1,6 @@
 import * as store from '../store.js';
 import { getBoard, movePlayer, getConnectedHexes } from '../models/hexboard.js';
-import { getPlantAtHex, waterPlant, collectPlant, plantSeed } from '../models/plant.js';
+import { getPlantAtHex, waterPlant, collectPlant, plantSeed, neglectPlant } from '../models/plant.js';
 import { SHOP_ITEMS, PLANT_OPTIONS, WATER_OPTIONS, canAfford, buyShopItem, buyWater } from '../models/economy.js';
 import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
@@ -1038,6 +1038,7 @@ export function mount(container) {
       const remaining = plant.wateringsNeeded - plant.wateringsGiven;
 
       if (waterCount > 0) {
+        const oldHexId = plant.hexId;
         const watered = waterPlant(plant.id);
         if (watered) {
           const crowSprite = remaining > 2 ? '48_watering_large.png' : '37_watering_small.png';
@@ -1049,13 +1050,29 @@ export function mount(container) {
               ? 'Your plant is ready to collect!'
               : `Your plant needs ${left} more watering${left > 1 ? 's' : ''}. Find it further ahead!`,
           });
+          if (!watered.ready && watered.hexId !== oldHexId) {
+            await animateSoilPlacement(hexId, watered.hexId);
+          }
         }
       } else {
-        await showRewardPopup({
-          crowSprite: '37_watering_small.png',
-          title: 'Needs Water!',
-          details: `This plant needs ${remaining} watering${remaining > 1 ? 's' : ''}. Buy water at a shop!`,
-        });
+        const result = neglectPlant(plant.id);
+        if (result && result.died) {
+          await showRewardPopup({
+            crowSprite: '37_watering_small.png',
+            title: 'Plant Died!',
+            details: 'You had no water and the plant withered away...',
+          });
+        } else if (result) {
+          const left = result.plant.wateringsNeeded - result.plant.wateringsGiven;
+          await showRewardPopup({
+            crowSprite: '37_watering_small.png',
+            title: 'No Water!',
+            details: `The plant lost some growth. It needs ${left} watering${left > 1 ? 's' : ''} now. Find it further ahead!`,
+          });
+          if (result.fromHexId && result.toHexId) {
+            await animateSoilPlacement(hexId, result.toHexId);
+          }
+        }
       }
     }
   }

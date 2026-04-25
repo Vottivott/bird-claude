@@ -3,7 +3,7 @@ import { createRNG, randomInt } from '../utils/random.js';
 
 export function plantSeed(plantOption, currentHexId) {
   const board = store.getHexBoard();
-  const offset = randomInt(createRNG(Date.now()), 5, 10);
+  const offset = randomInt(createRNG(Date.now()), 2, 8);
 
   let targetHexId = currentHexId;
   let visited = new Set([currentHexId]);
@@ -79,6 +79,56 @@ export function waterPlant(plantId) {
 
   store.setPlants(plants);
   return plant;
+}
+
+export function neglectPlant(plantId) {
+  const plants = store.getPlants();
+  const plant = plants.find(p => p.id === plantId);
+  if (!plant) return null;
+
+  if (plant.wateringsGiven === 0) {
+    plant.collected = true;
+    plant.dead = true;
+    const board = store.getHexBoard();
+    const hex = board.hexes.find(h => h.id === plant.hexId);
+    if (hex) {
+      hex.type = 'normal';
+      delete hex.plantData;
+      store.setHexBoard(board);
+    }
+    store.setPlants(plants);
+    return { plant, died: true };
+  }
+
+  plant.wateringsGiven--;
+  plant.ready = false;
+
+  const board = store.getHexBoard();
+  const currentHex = board.hexes.find(h => h.id === plant.hexId);
+  if (currentHex) {
+    const rng = createRNG(Date.now());
+    const offset = randomInt(rng, 3, 6);
+    let target = currentHex;
+    let visited = new Set([plant.hexId]);
+    for (let i = 0; i < offset && target; i++) {
+      const next = target.connections.find(id => !visited.has(id));
+      if (next === undefined) break;
+      visited.add(next);
+      target = board.hexes.find(h => h.id === next);
+    }
+    const oldHexId = plant.hexId;
+    currentHex.type = 'normal';
+    delete currentHex.plantData;
+    plant.hexId = target.id;
+    target.type = 'plant';
+    target.plantData = { plantId: plant.id };
+    store.setHexBoard(board);
+    store.setPlants(plants);
+    return { plant, died: false, fromHexId: oldHexId, toHexId: target.id };
+  }
+
+  store.setPlants(plants);
+  return { plant, died: false };
 }
 
 export function collectPlant(plantId) {
