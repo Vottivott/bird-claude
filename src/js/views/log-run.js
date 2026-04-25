@@ -4,6 +4,7 @@ import { addSteps } from '../models/hexboard.js';
 import { showRewardPopup } from '../ui/toast.js';
 import { navigate } from '../router.js';
 import { namedAsset } from '../utils/assets.js';
+import parseAPNG from 'apng-js';
 
 function formatTime(ms) {
   const totalSec = Math.floor(ms / 1000);
@@ -26,6 +27,7 @@ export function mount(container) {
   div.innerHTML = `
     <div class="log-run__animation">
       <img src="${namedAsset('57_log_run.png')}" alt="Log a run" id="crow-img">
+      <canvas id="crow-run-canvas" style="display:none;max-height:160px;max-width:200px"></canvas>
     </div>
 
     <!-- Timer mode (default) -->
@@ -88,6 +90,8 @@ export function mount(container) {
   container.appendChild(div);
 
   const crowImg = div.querySelector('#crow-img');
+  const crowCanvas = div.querySelector('#crow-run-canvas');
+  const crowCtx = crowCanvas.getContext('2d');
   const timerDisplay = div.querySelector('#timer-display');
   const btnStart = div.querySelector('#btn-start');
   const btnReset = div.querySelector('#btn-reset');
@@ -96,16 +100,35 @@ export function mount(container) {
   const timerSpeedPreview = div.querySelector('#timer-speed-preview');
   const btnSaveTimer = div.querySelector('#btn-save-timer');
 
+  let crowPlayer = null;
+  (async () => {
+    try {
+      const res = await fetch(namedAsset('running_transparent_loop.png'));
+      const buf = await res.arrayBuffer();
+      const apng = parseAPNG(buf);
+      if (apng instanceof Error) throw apng;
+      crowCanvas.width = apng.width;
+      crowCanvas.height = apng.height;
+      crowPlayer = await apng.getPlayer(crowCtx);
+    } catch (e) {
+      console.warn('Running APNG preload failed:', e);
+    }
+  })();
+
   function startCrowRunning() {
-    crowImg.src = namedAsset('running_transparent_loop.png');
+    if (crowPlayer) {
+      crowImg.style.display = 'none';
+      crowCanvas.style.display = '';
+      crowPlayer.play();
+    }
   }
 
   function stopCrowRunning() {
-    const canvas = document.createElement('canvas');
-    canvas.width = crowImg.naturalWidth || crowImg.width;
-    canvas.height = crowImg.naturalHeight || crowImg.height;
-    canvas.getContext('2d').drawImage(crowImg, 0, 0, canvas.width, canvas.height);
-    try { crowImg.src = canvas.toDataURL(); } catch (_) {}
+    if (crowPlayer) {
+      crowPlayer.pause();
+    }
+    crowCanvas.style.display = 'none';
+    crowImg.style.display = '';
   }
 
   // Timer controls
@@ -257,7 +280,7 @@ export function mount(container) {
   });
 
   async function submitRun(minutes, distance, img, btn) {
-    img.src = namedAsset('running_transparent_loop.png');
+    startCrowRunning();
     btn.disabled = true;
     btn.textContent = 'Saving...';
 

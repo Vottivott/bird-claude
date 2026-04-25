@@ -62,7 +62,8 @@
   margin: 16px 0;
 }
 
-.log-run__animation img {
+.log-run__animation img,
+.log-run__animation canvas {
   max-height: 160px;
   max-width: 200px;
   object-fit: contain;

@@ -334,6 +334,22 @@ export function mount(container) {
   let crowFrameIndex = 0;
   let crowFrameTime = 0;
   let lastFrameTs = 0;
+  let crowW = 0, crowH = 0;
+
+  function processShadow(imageData) {
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a === 0) continue;
+      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if (a < 150 && lum > 160) { d[i + 3] = Math.round(a * 0.3); continue; }
+      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
+      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      const sat = mx > 0 ? (mx - mn) / mx : 0;
+      if (lum > 200 && sat < 0.15) d[i + 3] = Math.round(a * 0.3);
+    }
+    return imageData;
+  }
 
   (async function loadCrowFrames() {
     const src = namedAsset('walking_hex.png');
@@ -342,16 +358,20 @@ export function mount(container) {
       const buf = await res.arrayBuffer();
       const apng = parseAPNG(buf);
       if (apng instanceof Error) throw apng;
-      const frames = await Promise.all(apng.frames.map(f => {
-        const url = URL.createObjectURL(f.imageData);
-        const img = new Image();
-        return new Promise(resolve => {
-          img.onload = () => { URL.revokeObjectURL(url); resolve({ img, delay: f.delay }); };
-          img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-          img.src = url;
-        });
-      }));
-      crowFrames = frames.filter(Boolean);
+      crowW = apng.width;
+      crowH = apng.height;
+      const offscreen = document.createElement('canvas');
+      offscreen.width = crowW;
+      offscreen.height = crowH;
+      const offCtx = offscreen.getContext('2d');
+      for (const f of apng.frames) {
+        const bitmap = await createImageBitmap(f.imageData);
+        offCtx.clearRect(0, 0, crowW, crowH);
+        offCtx.drawImage(bitmap, f.left, f.top);
+        bitmap.close();
+        const imageData = processShadow(offCtx.getImageData(0, 0, crowW, crowH));
+        crowFrames.push({ imageData, delay: f.delay });
+      }
     } catch (e) {
       console.warn('APNG parse failed, using static fallback:', e);
     }
@@ -359,7 +379,17 @@ export function mount(container) {
       const img = new Image();
       img.src = src;
       await new Promise(r => { img.onload = r; img.onerror = r; });
-      if (img.naturalWidth) crowFrames = [{ img, delay: 100 }];
+      if (img.naturalWidth) {
+        crowW = img.naturalWidth;
+        crowH = img.naturalHeight;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = crowW;
+        offscreen.height = crowH;
+        const offCtx = offscreen.getContext('2d');
+        offCtx.drawImage(img, 0, 0);
+        const imageData = processShadow(offCtx.getImageData(0, 0, crowW, crowH));
+        crowFrames.push({ imageData, delay: 100 });
+      }
     }
     if (crowFrames.length) freezeCrow();
   })();
@@ -400,30 +430,12 @@ export function mount(container) {
     }
     lastFrameTs = timestamp || 0;
 
-    const frame = crowFrames[crowFrameIndex];
-    const w = frame.img.naturalWidth;
-    const h = frame.img.naturalHeight;
-    if (!w || !h) return;
-    if (crowDisplay.width !== w || crowDisplay.height !== h) {
-      crowDisplay.width = w;
-      crowDisplay.height = h;
-      crowDisplay.style.width = (50 * w / h) + 'px';
+    if (crowDisplay.width !== crowW || crowDisplay.height !== crowH) {
+      crowDisplay.width = crowW;
+      crowDisplay.height = crowH;
+      crowDisplay.style.width = (50 * crowW / crowH) + 'px';
     }
-    crowDisplayCtx.clearRect(0, 0, w, h);
-    crowDisplayCtx.drawImage(frame.img, 0, 0, w, h);
-    const imageData = crowDisplayCtx.getImageData(0, 0, w, h);
-    const d = imageData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const a = d[i + 3];
-      if (a === 0) continue;
-      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      if (a < 150 && lum > 160) { d[i + 3] = Math.round(a * 0.3); continue; }
-      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
-      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
-      const sat = mx > 0 ? (mx - mn) / mx : 0;
-      if (lum > 200 && sat < 0.15) d[i + 3] = Math.round(a * 0.3);
-    }
-    crowDisplayCtx.putImageData(imageData, 0, 0);
+    crowDisplayCtx.putImageData(crowFrames[crowFrameIndex].imageData, 0, 0);
   }
 
   function freezeCrow() {
