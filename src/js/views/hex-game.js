@@ -105,29 +105,73 @@ function getTileKey(hex, state) {
 const _tintCanvas = document.createElement('canvas');
 const _tintCtx = _tintCanvas.getContext('2d');
 
+function addHexPath(ctx, cx, cy) {
+  const o = getOffsets();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 180) * (60 * i - 30);
+    const x = cx + o.hexW * Math.cos(angle);
+    const baseY = o.hexH * Math.sin(angle);
+    const y = cy + (o.hexOfsY || 0) + baseY + Math.sign(baseY) * (o.hexMid || 0);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function drawTile(ctx, cx, cy, img, tinted) {
+  const o = getOffsets();
+  if (tinted) {
+    const dpr = window.devicePixelRatio || 1;
+    const tw = Math.ceil(o.tileW * dpr), th = Math.ceil(o.tileH * dpr);
+    if (_tintCanvas.width !== tw || _tintCanvas.height !== th) {
+      _tintCanvas.width = tw;
+      _tintCanvas.height = th;
+    }
+    _tintCtx.globalCompositeOperation = 'source-over';
+    _tintCtx.clearRect(0, 0, tw, th);
+    _tintCtx.drawImage(img, 0, 0, tw, th);
+    _tintCtx.globalCompositeOperation = 'source-atop';
+    _tintCtx.fillStyle = 'rgba(255,255,255,0.45)';
+    _tintCtx.fillRect(0, 0, tw, th);
+    ctx.drawImage(_tintCanvas, 0, 0, tw, th, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+  } else {
+    ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+  }
+}
+
 function drawHex(ctx, cx, cy, images, hex, state) {
   const o = getOffsets();
   const tileKey = getTileKey(hex, state);
   const img = images[tileKey];
+  const hasImg = img && img.complete && img.naturalWidth > 0;
+  const tinted = state === 'hidden' || state === 'reachable';
 
-  if (img && img.complete && img.naturalWidth > 0) {
-    if (state === 'hidden' || state === 'reachable') {
-      const dpr = window.devicePixelRatio || 1;
-      const tw = Math.ceil(o.tileW * dpr), th = Math.ceil(o.tileH * dpr);
-      if (_tintCanvas.width !== tw || _tintCanvas.height !== th) {
-        _tintCanvas.width = tw;
-        _tintCanvas.height = th;
-      }
-      _tintCtx.globalCompositeOperation = 'source-over';
-      _tintCtx.clearRect(0, 0, tw, th);
-      _tintCtx.drawImage(img, 0, 0, tw, th);
-      _tintCtx.globalCompositeOperation = 'source-atop';
-      _tintCtx.fillStyle = 'rgba(255,255,255,0.45)';
-      _tintCtx.fillRect(0, 0, tw, th);
-      ctx.drawImage(_tintCanvas, 0, 0, tw, th, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
-    } else {
-      ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
-    }
+  if (state === 'reachable' && hasImg) {
+    const sideBaseY = o.hexH * Math.sin(-Math.PI / 6);
+    const splitY = cy + (o.hexOfsY || 0) + sideBaseY + Math.sign(sideBaseY) * (o.hexMid || 0);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - o.tileW, splitY, o.tileW * 2, o.tileH * 2);
+    ctx.clip();
+    drawTile(ctx, cx, cy, img, tinted);
+    ctx.restore();
+
+    ctx.beginPath();
+    addHexPath(ctx, cx, cy);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - o.tileW, cy - o.tileH, o.tileW * 2, splitY - (cy - o.tileH));
+    ctx.clip();
+    drawTile(ctx, cx, cy, img, tinted);
+    ctx.restore();
+  } else {
+    if (hasImg) drawTile(ctx, cx, cy, img, tinted);
   }
 
   if (state === 'hidden' && hex.type === 'normal') {
@@ -136,22 +180,6 @@ function drawHex(ctx, cx, cy, images, hex, state) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('?', cx, cy);
-  } else if (state === 'reachable') {
-    const o = getOffsets();
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i - 30);
-      const x = cx + o.hexW * Math.cos(angle);
-      const baseY = o.hexH * Math.sin(angle);
-      const y = cy + (o.hexOfsY || 0) + baseY + Math.sign(baseY) * (o.hexMid || 0);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash([4, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
   }
 }
 
@@ -263,7 +291,7 @@ export function mount(container) {
     <div class="hex-game__canvas-container" style="position:relative">
       <canvas id="hex-canvas"></canvas>
       <div id="crow-wrapper" style="position:absolute;pointer-events:none;transform:translate(-50%,-85%);z-index:10">
-        <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="height:50px;object-fit:contain;position:absolute;opacity:0">
+        <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="height:50px;position:absolute;left:-9999px">
         <canvas id="crow-display" style="height:50px"></canvas>
       </div>
     </div>
@@ -360,11 +388,9 @@ export function mount(container) {
       crowAnimLoop = null;
     }
     renderCrowFrame();
-    crowSprite.style.visibility = 'hidden';
   }
 
   function unfreezeCrow() {
-    crowSprite.style.visibility = 'visible';
     function loop() {
       renderCrowFrame();
       crowAnimLoop = requestAnimationFrame(loop);
