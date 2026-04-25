@@ -220,6 +220,10 @@ export function mount(container) {
       if (runFrames.length) {
         crowCanvas.width = width;
         crowCanvas.height = height;
+        const displayH = 160;
+        const displayW = Math.round(width * displayH / height);
+        crowCanvas.style.width = displayW + 'px';
+        crowCanvas.style.height = displayH + 'px';
       }
     } catch (e) {
       console.warn('Running APNG preload failed:', e);

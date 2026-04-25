@@ -45,6 +45,45 @@ function cacheBustPublicAssetsPlugin() {
       }
 
       fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+      // Remove unused duplicate asset directory
+      const uncleaned = path.resolve(__dirname, 'dist/assets/named_selection_borderless_8x_cleaned');
+      if (fs.existsSync(uncleaned)) {
+        fs.rmSync(uncleaned, { recursive: true });
+      }
+
+      const swPath = path.resolve(__dirname, 'dist/sw.js');
+      if (fs.existsSync(swPath)) {
+        const distDir = path.resolve(__dirname, 'dist');
+        const skip = [
+          'walking_transparent_loop.png',
+          'running_transparent_loop.png',
+          'hex_sprites_aligned_collage.png',
+          'hex_sprites_aligned_manifest.txt',
+          'retint_manifest.json',
+        ];
+        const skipDirs = ['named_selection_borderless_8x_cleaned/'];
+        const precacheList = ['/'];
+        function walk(dir) {
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            const rel = '/' + path.relative(distDir, full);
+            if (entry.isDirectory()) {
+              if (rel === '/assets/named_selection_borderless_8x_cleaned') continue;
+              walk(full);
+            } else {
+              if (skip.some(s => entry.name === s)) continue;
+              if (entry.name === 'sw.js') continue;
+              precacheList.push(rel);
+            }
+          }
+        }
+        walk(distDir);
+        let sw = fs.readFileSync(swPath, 'utf8');
+        sw = sw.replaceAll('__SW_VERSION__', assetVersion);
+        sw = sw.replaceAll('__PRECACHE_LIST__', JSON.stringify(precacheList, null, 2));
+        fs.writeFileSync(swPath, sw);
+      }
     },
   };
 }

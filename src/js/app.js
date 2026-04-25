@@ -51,3 +51,60 @@ applyHexEditorUrlFlags();
 
 const container = document.getElementById('view-container');
 initRouter(container);
+
+(() => {
+  const nestTab = document.querySelector('[data-view="nest"]');
+  if (!nestTab) return;
+  let pressTimer = null;
+  nestTab.addEventListener('touchstart', (e) => {
+    pressTimer = setTimeout(() => showSecretMenu(), 800);
+  }, { passive: true });
+  nestTab.addEventListener('touchend', () => clearTimeout(pressTimer));
+  nestTab.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+  function showSecretMenu() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:white;border-radius:16px;padding:24px;width:280px;text-align:center';
+    panel.innerHTML = `
+      <div style="font-weight:700;font-size:18px;margin-bottom:16px">Secret Menu</div>
+      <button id="secret-update" style="width:100%;padding:14px;border:none;border-radius:10px;background:#3182CE;color:white;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px">Check for Updates</button>
+      <button id="secret-clear" style="width:100%;padding:14px;border:none;border-radius:10px;background:#E53E3E;color:white;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px">Clear All Data</button>
+      <button id="secret-close" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;font-size:14px;cursor:pointer">Cancel</button>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    panel.querySelector('#secret-close').addEventListener('click', () => overlay.remove());
+    panel.querySelector('#secret-update').addEventListener('click', async () => {
+      const btn = panel.querySelector('#secret-update');
+      btn.textContent = 'Checking...';
+      btn.disabled = true;
+      try {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        window.location.reload();
+      } catch (e) {
+        btn.textContent = 'Update failed';
+        setTimeout(() => { btn.textContent = 'Check for Updates'; btn.disabled = false; }, 2000);
+      }
+    });
+    panel.querySelector('#secret-clear').addEventListener('click', () => {
+      if (confirm('This will delete all your runs, seeds, plants, and progress. Are you sure?')) {
+        localStorage.clear();
+        if ('caches' in window) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+        window.location.reload();
+      }
+    });
+  }
+})();
