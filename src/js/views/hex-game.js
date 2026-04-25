@@ -526,7 +526,11 @@ export function mount(container) {
     crowDisplayCtx.drawImage(f.img, 0, 0, crowW, crowH);
     const imageData = crowDisplayCtx.getImageData(0, 0, crowW, crowH);
     const d = imageData.data;
+    const halfY = Math.floor(crowH / 2);
     for (let i = 0; i < d.length; i += 4) {
+      const px = (i / 4);
+      const y = Math.floor(px / crowW);
+      if (y < halfY) continue;
       const a = d[i + 3];
       if (a === 0) continue;
       const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
@@ -612,6 +616,7 @@ export function mount(container) {
   function crowYOffset(hex) {
     if (!hex) return 0;
     if (hex.type === 'shop') return 22;
+    if (hex.type === 'chest') return 22;
     if (getPlantAtHex(hex.id)) return 22;
     return 0;
   }
@@ -806,7 +811,7 @@ export function mount(container) {
 
     animating = true;
 
-    return new Promise(resolve => {
+    await new Promise(resolve => {
       const duration = 1200;
       const start = performance.now();
 
@@ -814,27 +819,60 @@ export function mount(container) {
         const t = Math.min(1, (now - start) / duration);
         const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-        renderAt(fromPos);
+        const camX = fromPos.x + (toPos.x - fromPos.x) * ease;
+        const camY = fromPos.y + (toPos.y - fromPos.y) * ease;
+        renderAt({ x: camX, y: camY });
+        positionCrow(fromPos.x, fromPos.y + crowYOffset(fromHex));
 
         const w = canvas.width / window.devicePixelRatio;
         const h = canvas.height / window.devicePixelRatio;
-        const offsetX = w / 2 - fromPos.x;
-        const offsetY = h / 2 - fromPos.y;
-        const seedX = fromPos.x + (toPos.x - fromPos.x) * ease + offsetX;
-        const seedY = fromPos.y + (toPos.y - fromPos.y) * ease + offsetY;
-        const arcOffset = -Math.sin(t * Math.PI) * 20;
-        drawTile(ctx, seedX, seedY + arcOffset, seedImg, false);
+        const seedScreenX = toPos.x + (w / 2 - camX);
+        const seedScreenY = toPos.y + (h / 2 - camY);
+        const seedT = Math.min(1, t / 0.6);
+        const seedEase = seedT < 0.5 ? 2 * seedT * seedT : 1 - Math.pow(-2 * seedT + 2, 2) / 2;
+        const fromScreenX = fromPos.x + (w / 2 - camX);
+        const fromScreenY = fromPos.y + (h / 2 - camY);
+        const sx = fromScreenX + (seedScreenX - fromScreenX) * seedEase;
+        const sy = fromScreenY + (seedScreenY - fromScreenY) * seedEase;
+        const arcOffset = -Math.sin(seedT * Math.PI) * 20;
+        drawTile(ctx, sx, sy + arcOffset, seedImg, false);
 
         if (t < 1) {
           requestAnimationFrame(tick);
         } else {
-          animating = false;
           resolve();
         }
       }
 
       requestAnimationFrame(tick);
     });
+
+    await new Promise(r => setTimeout(r, 400));
+
+    await new Promise(resolve => {
+      const duration = 600;
+      const start = performance.now();
+      const playerPos = hexToPixel(fromHex.q, fromHex.r);
+
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const camX = toPos.x + (playerPos.x - toPos.x) * ease;
+        const camY = toPos.y + (playerPos.y - toPos.y) * ease;
+        renderAt({ x: camX, y: camY });
+        positionCrow(playerPos.x, playerPos.y + crowYOffset(fromHex));
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    });
+
+    animating = false;
   }
 
   async function handleShop(shopTier) {
@@ -896,12 +934,17 @@ export function mount(container) {
       });
 
       modal.sheet.querySelectorAll('.water-buy-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const idx = parseInt(btn.dataset.waterIdx);
           const option = availableWater[idx];
           if (option && buyWater(option)) {
-            btn.textContent = 'Bought!';
-            btn.disabled = true;
+            await showRewardPopup({
+              crowSprite: '54_very_happy.png',
+              title: 'Purchased!',
+              details: `${option.name} — ${option.uses} use${option.uses > 1 ? 's' : ''}`,
+            });
+            modal.close();
+            resolve();
           }
         });
       });
@@ -939,6 +982,11 @@ export function mount(container) {
     }
 
     const picks = [];
+    const seenTypes = new Set(plants.map(p => p.plantType));
+    const unseenAffordable = pool.filter(p => !seenTypes.has(p.id) && p.cost <= seeds);
+    const shuffledUnseen = seededShuffle(unseenAffordable, hexId * 3 + 17);
+    if (shuffledUnseen.length > 0) picks.push(shuffledUnseen[0]);
+
     const shuffledAffordable = seededShuffle(affordable, hexId * 7 + 31);
     const shuffledExpensive = seededShuffle(expensive.length > 0 ? expensive : pool.slice(-3), hexId * 13 + 47);
 

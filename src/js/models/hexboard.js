@@ -177,7 +177,7 @@ function revealHexOnBoard(board, hexId) {
     }
     hex.content = { seeds, sticks };
   } else if (hex.type === 'chest') {
-    const seeds = randomInt(rng, 20, 200);
+    const seeds = randomInt(rng, 2, 20) * 10;
     hex.content = { seeds, sticks: 0, chest: true };
   } else if (hex.type === 'shop' || hex.type === 'soil') {
     const seeds = randomInt(rng, 1, 2);
