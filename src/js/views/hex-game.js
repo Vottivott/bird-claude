@@ -6,7 +6,6 @@ import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
 import { namedAsset, plantAsset, hexAsset } from '../utils/assets.js';
 import { getPlantOption } from '../models/economy.js';
-import parseAPNG from 'apng-js';
 
 const HEX_SIZE = 40;
 
@@ -336,19 +335,130 @@ export function mount(container) {
   let crowLastTs = 0;
   let crowW = 0, crowH = 0;
 
+  function parseApngFrames(buf) {
+    const bytes = new Uint8Array(buf);
+    const dv = new DataView(buf);
+    const PNG_SIG = bytes.slice(0, 8);
+    const frames = [];
+    let ihdrChunk = null;
+    let pos = 8;
+    let currentFctl = null;
+    let currentDataChunks = [];
+    let firstFrame = true;
+
+    function readChunk() {
+      if (pos + 8 > bytes.length) return null;
+      const len = dv.getUint32(pos);
+      const type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+      const data = bytes.slice(pos+8, pos+8+len);
+      const totalLen = 12 + len;
+      pos += totalLen;
+      return { type, data, raw: bytes.slice(pos - totalLen, pos) };
+    }
+
+    function buildPng(ihdr, idatDataArrays) {
+      function chunk(type, data) {
+        const buf = new Uint8Array(12 + data.length);
+        const dv = new DataView(buf.buffer);
+        dv.setUint32(0, data.length);
+        buf[4] = type.charCodeAt(0); buf[5] = type.charCodeAt(1);
+        buf[6] = type.charCodeAt(2); buf[7] = type.charCodeAt(3);
+        buf.set(data, 8);
+        let crc = crc32(buf.slice(4, 8 + data.length));
+        dv.setUint32(8 + data.length, crc);
+        return buf;
+      }
+      const parts = [PNG_SIG, ihdr, ...idatDataArrays.map(d => chunk('IDAT', d))];
+      const iend = new Uint8Array([0,0,0,0, 0x49,0x45,0x4E,0x44, 0xAE,0x42,0x60,0x82]);
+      parts.push(iend);
+      const total = parts.reduce((s, p) => s + p.length, 0);
+      const result = new Uint8Array(total);
+      let off = 0;
+      for (const p of parts) { result.set(p, off); off += p.length; }
+      return result;
+    }
+
+    function crc32(data) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < data.length; i++) {
+        crc ^= data[i];
+        for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function flushFrame() {
+      if (!currentFctl || currentDataChunks.length === 0) return;
+      const fctl = currentFctl;
+      const delayNum = (fctl[20] << 8) | fctl[21];
+      const delayDen = (fctl[22] << 8) | fctl[23];
+      const delay = (delayNum / (delayDen || 100)) * 1000;
+      const fw = (fctl[4] << 24 | fctl[5] << 16 | fctl[6] << 8 | fctl[7]) >>> 0;
+      const fh = (fctl[8] << 24 | fctl[9] << 16 | fctl[10] << 8 | fctl[11]) >>> 0;
+
+      const ihdrData = new Uint8Array(ihdrChunk.data);
+      const frameIhdr = new Uint8Array(ihdrData.length);
+      frameIhdr.set(ihdrData);
+      const fihdr = new DataView(frameIhdr.buffer);
+      fihdr.setUint32(0, fw);
+      fihdr.setUint32(4, fh);
+
+      const ihdrFull = new Uint8Array(12 + frameIhdr.length);
+      const ihdrDv = new DataView(ihdrFull.buffer);
+      ihdrDv.setUint32(0, frameIhdr.length);
+      ihdrFull[4] = 0x49; ihdrFull[5] = 0x48; ihdrFull[6] = 0x44; ihdrFull[7] = 0x52;
+      ihdrFull.set(frameIhdr, 8);
+      const ihdrCrc = crc32(ihdrFull.slice(4, 8 + frameIhdr.length));
+      ihdrDv.setUint32(8 + frameIhdr.length, ihdrCrc);
+
+      frames.push({ pngData: buildPng(ihdrFull, currentDataChunks), delay });
+      currentFctl = null;
+      currentDataChunks = [];
+    }
+
+    let c;
+    while ((c = readChunk())) {
+      if (c.type === 'IHDR') {
+        ihdrChunk = c;
+        crowW = dv.getUint32(16);
+        crowH = dv.getUint32(20);
+      } else if (c.type === 'fcTL') {
+        if (currentFctl) flushFrame();
+        currentFctl = c.data;
+        firstFrame = false;
+      } else if (c.type === 'IDAT') {
+        if (currentFctl) currentDataChunks.push(c.data);
+        else {
+          if (!currentFctl && frames.length === 0) {
+            currentFctl = null;
+          }
+          currentDataChunks.push(c.data);
+        }
+      } else if (c.type === 'fdAT') {
+        currentDataChunks.push(c.data.slice(4));
+      }
+    }
+    flushFrame();
+    return frames;
+  }
+
   (async function loadCrowFrames() {
     const src = namedAsset('walking_hex.png');
     try {
       const res = await fetch(src);
       const buf = await res.arrayBuffer();
-      const apng = parseAPNG(buf);
-      if (apng instanceof Error) throw apng;
-      crowW = apng.width;
-      crowH = apng.height;
-      await apng.createImages();
-      crowFrames = apng.frames
-        .filter(f => f.imageElement && f.imageElement.complete)
-        .map(f => ({ img: f.imageElement, delay: f.delay }));
+      const frames = parseApngFrames(buf);
+      const loaded = await Promise.all(frames.map(f => {
+        const blob = new Blob([f.pngData], { type: 'image/png' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        return new Promise(resolve => {
+          img.onload = () => resolve({ img, delay: f.delay });
+          img.onerror = () => resolve(null);
+          img.src = url;
+        });
+      }));
+      crowFrames = loaded.filter(Boolean);
     } catch (e) {
       console.warn('APNG parse failed:', e);
     }
@@ -382,6 +492,7 @@ export function mount(container) {
       }
     }
     bar.innerHTML = html;
+    bar.style.display = html ? '' : 'none';
   }
 
   updateWaterBar(econ);
