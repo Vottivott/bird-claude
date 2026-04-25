@@ -506,15 +506,22 @@ export function mount(container) {
     div.querySelector('#steps-left').textContent = board.pendingSteps;
   }
 
+  function crowYOffset(hex) {
+    if (!hex) return 0;
+    if (hex.type === 'shop') return 12;
+    if (getPlantAtHex(hex.id)) return 12;
+    return 0;
+  }
+
   function render() {
     const board = getBoard();
     const currentHex = board.hexes.find(h => h.id === board.playerPosition);
     crowWorldPos = hexToPixel(currentHex.q, currentHex.r);
     renderAt(crowWorldPos);
-    positionCrow(crowWorldPos.x, crowWorldPos.y);
+    positionCrow(crowWorldPos.x, crowWorldPos.y + crowYOffset(currentHex));
   }
 
-  function animateMove(fromPos, toPos, duration) {
+  function animateMove(fromPos, toPos, ofsFrom, ofsTo, duration) {
     return new Promise(resolve => {
       animating = true;
       unfreezeCrow();
@@ -527,7 +534,8 @@ export function mount(container) {
         const cy = fromPos.y + (toPos.y - fromPos.y) * ease;
         crowWorldPos = { x: cx, y: cy };
         renderAt(crowWorldPos);
-        positionCrow(cx, cy);
+        const crowOfs = ofsFrom + (ofsTo - ofsFrom) * ease;
+        positionCrow(cx, cy + crowOfs);
 
         if (t < 1) {
           requestAnimationFrame(tick);
@@ -633,7 +641,7 @@ export function mount(container) {
 
     const dist = Math.hypot(toPos.x - fromPos.x, toPos.y - fromPos.y);
     const duration = Math.max(400, Math.min(900, dist * 8));
-    await animateMove(fromPos, toPos, duration);
+    await animateMove(fromPos, toPos, crowYOffset(currentHex), crowYOffset(clickedHex), duration);
 
     render();
 
