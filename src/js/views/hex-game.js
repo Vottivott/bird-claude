@@ -6,6 +6,7 @@ import { showModal } from '../ui/modal.js';
 import { showRewardPopup } from '../ui/toast.js';
 import { namedAsset, plantAsset, hexAsset } from '../utils/assets.js';
 import { getPlantOption } from '../models/economy.js';
+import parseAPNG from 'apng-js';
 
 const HEX_SIZE = 40;
 
@@ -19,7 +20,7 @@ const DEFAULT_OFFSETS = {
   hexW: 51.5,
   hexH: 41.5,
   hexMid: -9,
-  hexOfsY: 2,
+  hexOfsY: 0,
 };
 
 function isHexEditorUrlEnabled() {
@@ -291,7 +292,6 @@ export function mount(container) {
     <div class="hex-game__canvas-container" style="position:relative">
       <canvas id="hex-canvas"></canvas>
       <div id="crow-wrapper" style="position:absolute;pointer-events:none;transform:translate(-50%,-85%);z-index:10">
-        <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="height:50px;position:absolute;left:-9999px">
         <canvas id="crow-display" style="height:50px"></canvas>
       </div>
     </div>
@@ -324,12 +324,45 @@ export function mount(container) {
   resize();
 
   const crowWrapper = div.querySelector('#crow-wrapper');
-  const crowSprite = div.querySelector('#crow-sprite');
   const crowDisplay = div.querySelector('#crow-display');
   const crowDisplayCtx = crowDisplay.getContext('2d');
   let crowWorldPos = null;
   let animating = false;
   let crowAnimLoop = null;
+
+  let crowFrames = [];
+  let crowFrameIndex = 0;
+  let crowFrameTime = 0;
+  let lastFrameTs = 0;
+
+  (async function loadCrowFrames() {
+    const src = namedAsset('walking_hex.png');
+    try {
+      const res = await fetch(src);
+      const buf = await res.arrayBuffer();
+      const apng = parseAPNG(buf);
+      if (apng instanceof Error) throw apng;
+      const frames = await Promise.all(apng.frames.map(f => {
+        const url = URL.createObjectURL(f.imageData);
+        const img = new Image();
+        return new Promise(resolve => {
+          img.onload = () => { URL.revokeObjectURL(url); resolve({ img, delay: f.delay }); };
+          img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+          img.src = url;
+        });
+      }));
+      crowFrames = frames.filter(Boolean);
+    } catch (e) {
+      console.warn('APNG parse failed, using static fallback:', e);
+    }
+    if (!crowFrames.length) {
+      const img = new Image();
+      img.src = src;
+      await new Promise(r => { img.onload = r; img.onerror = r; });
+      if (img.naturalWidth) crowFrames = [{ img, delay: 100 }];
+    }
+    if (crowFrames.length) freezeCrow();
+  })();
 
   const waterTypes = [
     { key: 'Blue Watering Can', icon: 'watering_can_blue.png' },
@@ -356,9 +389,20 @@ export function mount(container) {
     updateWaterBar(econ);
   });
 
-  function renderCrowFrame() {
-    const w = crowSprite.naturalWidth || crowSprite.width;
-    const h = crowSprite.naturalHeight || crowSprite.height;
+  function renderCrowFrame(timestamp) {
+    if (!crowFrames.length) return;
+    if (timestamp && lastFrameTs) {
+      crowFrameTime += timestamp - lastFrameTs;
+      while (crowFrames[crowFrameIndex] && crowFrameTime >= crowFrames[crowFrameIndex].delay) {
+        crowFrameTime -= crowFrames[crowFrameIndex].delay;
+        crowFrameIndex = (crowFrameIndex + 1) % crowFrames.length;
+      }
+    }
+    lastFrameTs = timestamp || 0;
+
+    const frame = crowFrames[crowFrameIndex];
+    const w = frame.img.naturalWidth;
+    const h = frame.img.naturalHeight;
     if (!w || !h) return;
     if (crowDisplay.width !== w || crowDisplay.height !== h) {
       crowDisplay.width = w;
@@ -366,7 +410,7 @@ export function mount(container) {
       crowDisplay.style.width = (50 * w / h) + 'px';
     }
     crowDisplayCtx.clearRect(0, 0, w, h);
-    crowDisplayCtx.drawImage(crowSprite, 0, 0, w, h);
+    crowDisplayCtx.drawImage(frame.img, 0, 0, w, h);
     const imageData = crowDisplayCtx.getImageData(0, 0, w, h);
     const d = imageData.data;
     for (let i = 0; i < d.length; i += 4) {
@@ -391,8 +435,9 @@ export function mount(container) {
   }
 
   function unfreezeCrow() {
-    function loop() {
-      renderCrowFrame();
+    lastFrameTs = 0;
+    function loop(ts) {
+      renderCrowFrame(ts);
       crowAnimLoop = requestAnimationFrame(loop);
     }
     crowAnimLoop = requestAnimationFrame(loop);
@@ -487,11 +532,6 @@ export function mount(container) {
 
   tilesReady.then(() => {
     render();
-    if (crowSprite.complete && crowSprite.naturalWidth > 0) {
-      freezeCrow();
-    } else {
-      crowSprite.addEventListener('load', () => freezeCrow(), { once: true });
-    }
   });
 
   // Secret editor: enable via localStorage.setItem('crowrun_hex_editor', '1')
@@ -621,6 +661,50 @@ export function mount(container) {
 
     render();
   });
+
+  async function animateSoilPlacement(fromHexId, toHexId) {
+    const board = getBoard();
+    const fromHex = board.hexes.find(h => h.id === fromHexId);
+    const toHex = board.hexes.find(h => h.id === toHexId);
+    if (!fromHex || !toHex) return;
+
+    const fromPos = hexToPixel(fromHex.q, fromHex.r);
+    const toPos = hexToPixel(toHex.q, toHex.r);
+    const seedImg = images['dirt_seed'];
+    if (!seedImg || !seedImg.complete) return;
+
+    animating = true;
+    crowWrapper.style.display = 'none';
+
+    return new Promise(resolve => {
+      const duration = 1200;
+      const start = performance.now();
+
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        const camX = fromPos.x + (toPos.x - fromPos.x) * ease;
+        const camY = fromPos.y + (toPos.y - fromPos.y) * ease;
+        renderAt({ x: camX, y: camY });
+
+        const w = canvas.width / window.devicePixelRatio;
+        const h = canvas.height / window.devicePixelRatio;
+        const arcOffset = -Math.sin(t * Math.PI) * 20;
+        drawTile(ctx, w / 2, h / 2 + arcOffset, seedImg, false);
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+          crowWrapper.style.display = '';
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    });
+  }
 
   async function handleShop(shopTier) {
     return new Promise((resolve) => {
@@ -790,16 +874,18 @@ export function mount(container) {
           if (!option || !canAfford(option.cost)) return;
 
           store.spendSeeds(option.cost, 'plant_purchase');
-          plantSeed(option, hexId);
+          const planted = plantSeed(option, hexId);
 
           await showRewardPopup({
             crowSprite: '35_planting_2.png',
             title: 'Planted!',
             details: 'Find it further on the path!',
             extraImage: plantAsset(option.image),
+            extraImageStyle: 'filter:brightness(0)',
           });
 
           modal.close();
+          await animateSoilPlacement(hexId, planted.hexId);
           resolve();
         });
       });
@@ -840,17 +926,15 @@ export function mount(container) {
             crowSprite,
             title: 'Watered!',
             details: watered.ready
-              ? `${watered.name} is ready to collect!`
-              : `${watered.name} needs ${left} more watering${left > 1 ? 's' : ''}. Find it further ahead!`,
-            extraImage: plantImg,
+              ? 'Your plant is ready to collect!'
+              : `Your plant needs ${left} more watering${left > 1 ? 's' : ''}. Find it further ahead!`,
           });
         }
       } else {
         await showRewardPopup({
           crowSprite: '37_watering_small.png',
           title: 'Needs Water!',
-          details: `${plant.name} needs ${remaining} watering${remaining > 1 ? 's' : ''}. Buy water at a shop!`,
-          extraImage: plantImg,
+          details: `This plant needs ${remaining} watering${remaining > 1 ? 's' : ''}. Buy water at a shop!`,
         });
       }
     }

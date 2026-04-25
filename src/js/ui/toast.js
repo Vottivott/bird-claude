@@ -32,7 +32,7 @@ export function showToast(message, duration = 2500) {
 
 export function showRewardPopup(options) {
   return new Promise((resolve) => {
-    const { crowSprite, title, details, seedsAmount, sticksAmount, stepsAmount, extraImage, onDismiss } = options;
+    const { crowSprite, title, details, seedsAmount, sticksAmount, stepsAmount, extraImage, extraImageStyle, onDismiss } = options;
 
     const overlay = document.createElement('div');
     overlay.className = 'reward-popup';
@@ -50,7 +50,7 @@ export function showRewardPopup(options) {
       <div class="reward-popup__content">
         <img class="reward-popup__crow" src="${namedAsset(crowSprite)}" alt="">
         <div class="reward-popup__title">${title}</div>
-        ${extraImage ? `<img src="${extraImage}" style="max-height:80px;object-fit:contain;margin:8px auto;display:block" alt="">` : ''}
+        ${extraImage ? `<img src="${extraImage}" style="max-height:80px;object-fit:contain;margin:8px auto;display:block;${extraImageStyle || ''}" alt="">` : ''}
         ${detailsHtml}
         ${seedsAmount ? `<div class="reward-popup__reward"><img src="${namedAsset('seeds.png')}" class="reward-popup__reward-icon">+${seedsAmount} seed${seedsAmount !== 1 ? 's' : ''}</div>` : ''}
         ${sticksAmount ? `<div class="reward-popup__reward" style="color:var(--brown)"><img src="${namedAsset('stick_pair.png')}" class="reward-popup__reward-icon" style="filter:drop-shadow(1px 0 0 #F5EDD4) drop-shadow(-1px 0 0 #F5EDD4) drop-shadow(0 1px 0 #F5EDD4) drop-shadow(0 -1px 0 #F5EDD4)">+${sticksAmount} stick${sticksAmount !== 1 ? 's' : ''}</div>` : ''}

@@ -15,10 +15,10 @@ export function mount(container) {
   div.className = 'view';
 
   const streakTypes = [
-    { key: 'daily', name: 'Daily', icon: '', color: 'var(--green)', desc: 'Run every day' },
-    { key: 'everyOther', name: 'Every 2nd Day', icon: '', color: 'var(--primary)', desc: 'Run at least every other day' },
-    { key: 'everyThird', name: 'Every 3rd Day', icon: '', color: 'var(--accent)', desc: 'Run at least every 3 days' },
-    { key: 'weekly', name: 'Weekly', icon: '', color: 'var(--brown)', desc: 'Run at least once a week' },
+    { key: 'daily', name: 'Daily', icon: '1d', color: 'var(--green-dark)', bg: 'rgba(127, 184, 138, 0.18)', desc: 'Run every day' },
+    { key: 'everyOther', name: 'Every 2nd Day', icon: '2d', color: 'var(--primary)', bg: 'rgba(94, 107, 122, 0.14)', desc: 'Run at least every other day' },
+    { key: 'everyThird', name: 'Every 3rd Day', icon: '3d', color: '#A88520', bg: 'rgba(212, 168, 48, 0.18)', desc: 'Run at least every 3 days' },
+    { key: 'weekly', name: 'Weekly', icon: '7d', color: 'var(--brown)', bg: 'rgba(138, 107, 80, 0.16)', desc: 'Run at least once a week' },
   ];
 
   div.innerHTML = `
@@ -31,7 +31,7 @@ export function mount(container) {
       const u = upcoming[idx];
       return `
         <div class="streak-card">
-          <div class="streak-card__icon" style="background:${st.color}20;color:${st.color}">
+          <div class="streak-card__icon" style="background:${st.bg};color:${st.color}">
             ${st.icon}
           </div>
           <div class="streak-card__info">

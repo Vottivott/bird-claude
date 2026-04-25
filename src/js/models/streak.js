@@ -74,31 +74,31 @@ export function checkAndAwardMilestones() {
     }
   }
 
-  // Every-other-day: milestone every 7 qualifying runs, rewards +20: 20, 40, 60, 80...
-  if (streaks.everyOther.current >= 7) {
-    const milestone = Math.floor(streaks.everyOther.current / 7) * 7;
+  // Every-other-day: milestone every 4 qualifying runs, rewards +20: 20, 40, 60, 80...
+  if (streaks.everyOther.current >= 4) {
+    const milestone = Math.floor(streaks.everyOther.current / 4) * 4;
     if (milestone > lma.everyOther) {
-      const level = milestone / 7;
-      const prevLevel = lma.everyOther / 7;
+      const level = milestone / 4;
+      const prevLevel = lma.everyOther / 4;
       for (let l = prevLevel + 1; l <= level; l++) {
         const reward = 20 * l;
         store.addSeeds(reward, 'streak_eod');
-        awarded.push({ type: 'everyOther', days: l * 7, reward });
+        awarded.push({ type: 'everyOther', days: l * 4, reward });
       }
       lma.everyOther = milestone;
     }
   }
 
-  // Every-third-day: milestone every 7 qualifying runs, rewards +10: 20, 30, 40, 50...
-  if (streaks.everyThird.current >= 7) {
-    const milestone = Math.floor(streaks.everyThird.current / 7) * 7;
+  // Every-third-day: milestone every 4 qualifying runs, rewards +10: 20, 30, 40, 50...
+  if (streaks.everyThird.current >= 4) {
+    const milestone = Math.floor(streaks.everyThird.current / 4) * 4;
     if (milestone > lma.everyThird) {
-      const level = milestone / 7;
-      const prevLevel = lma.everyThird / 7;
+      const level = milestone / 4;
+      const prevLevel = lma.everyThird / 4;
       for (let l = prevLevel + 1; l <= level; l++) {
         const reward = 10 + 10 * l;
         store.addSeeds(reward, 'streak_e3d');
-        awarded.push({ type: 'everyThird', days: l * 7, reward });
+        awarded.push({ type: 'everyThird', days: l * 4, reward });
       }
       lma.everyThird = milestone;
     }
@@ -139,9 +139,9 @@ export function getUpcomingRewards(streaks) {
   });
 
   const eodCurrent = streaks.everyOther.current;
-  const eodNext = Math.ceil((eodCurrent + 1) / 7) * 7;
+  const eodNext = Math.ceil((eodCurrent + 1) / 4) * 4;
   const eodLeft = eodNext - eodCurrent;
-  const eodLevel = eodNext / 7;
+  const eodLevel = eodNext / 4;
   upcoming.push({
     type: 'Every 2nd day',
     daysLeft: eodLeft * 2,
@@ -150,9 +150,9 @@ export function getUpcomingRewards(streaks) {
   });
 
   const e3dCurrent = streaks.everyThird.current;
-  const e3dNext = Math.ceil((e3dCurrent + 1) / 7) * 7;
+  const e3dNext = Math.ceil((e3dCurrent + 1) / 4) * 4;
   const e3dLeft = e3dNext - e3dCurrent;
-  const e3dLevel = e3dNext / 7;
+  const e3dLevel = e3dNext / 4;
   upcoming.push({
     type: 'Every 3rd day',
     daysLeft: e3dLeft * 3,
