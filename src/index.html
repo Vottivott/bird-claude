@@ -60,6 +60,95 @@
     </nav>
   </div>
 
-  <script type="module" src="./js/app.js"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has('birdReset') && !params.has('clearStorage') && !params.has('reset') && params.has('resetDone')) {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('resetDone');
+        window.history.replaceState({}, '', cleanUrl.toString());
+      }
+      const raw = params.get('birdReset') ?? params.get('clearStorage') ?? params.get('reset');
+      if (!raw) return;
+
+      const value = raw.trim().toLowerCase();
+      if (!['1', 'true', 'yes', 'on', 'bird'].includes(value)) return;
+
+      window.__BIRDCLAUDE_RESETTING__ = true;
+
+      const showResetMessage = () => {
+        const container = document.getElementById('view-container');
+        if (container) {
+          container.innerHTML = '<div style="padding:32px 20px;text-align:center;color:#5E6B7A;font:600 16px/1.4 system-ui,sans-serif">Clearing Crow Run local data…</div>';
+        }
+      };
+
+      const clearCookies = () => {
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        for (const cookie of cookies) {
+          const eq = cookie.indexOf('=');
+          const name = (eq >= 0 ? cookie.slice(0, eq) : cookie).trim();
+          if (!name) continue;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+        }
+      };
+
+      const clearIndexedDb = async () => {
+        if (!('indexedDB' in window) || typeof indexedDB.databases !== 'function') return;
+        try {
+          const databases = await indexedDB.databases();
+          await Promise.all(databases.map((db) => db?.name
+            ? new Promise((resolve) => {
+                const req = indexedDB.deleteDatabase(db.name);
+                req.onsuccess = req.onerror = req.onblocked = () => resolve();
+              })
+            : Promise.resolve()));
+        } catch (_) {}
+      };
+
+      const clearCacheStorage = async () => {
+        if (!('caches' in window)) return;
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        } catch (_) {}
+      };
+
+      const clearServiceWorkers = async () => {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        } catch (_) {}
+      };
+
+      const clearSiteState = async () => {
+        try { localStorage.clear(); } catch (_) {}
+        try { sessionStorage.clear(); } catch (_) {}
+        clearCookies();
+        await Promise.allSettled([
+          clearIndexedDb(),
+          clearCacheStorage(),
+          clearServiceWorkers(),
+        ]);
+      };
+
+      showResetMessage();
+      clearSiteState().finally(() => {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('birdReset');
+        nextUrl.searchParams.delete('clearStorage');
+        nextUrl.searchParams.delete('reset');
+        nextUrl.searchParams.set('resetDone', Date.now().toString());
+        window.location.replace(nextUrl.toString());
+      });
+    })();
+  </script>
+  <script type="module">
+    if (!window.__BIRDCLAUDE_RESETTING__) {
+      import('./js/app.js');
+    }
+  </script>
 </body>
 </html>

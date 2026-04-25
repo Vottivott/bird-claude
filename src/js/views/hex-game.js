@@ -11,11 +11,15 @@ const HEX_SIZE = 40;
 
 const OFFSETS_KEY = 'crowrun_hex_offsets';
 const DEFAULT_OFFSETS = {
-  stepX: 60,
-  stepY: 29.4,
-  rowHeight: 58.8,
+  stepX: 51.5,
+  stepY: 45.5,
+  rowHeight: 92.5,
   tileW: 96,
   tileH: 90.2,
+  hexW: 51.5,
+  hexH: 41.5,
+  hexMid: -9,
+  hexOfsY: 2,
 };
 
 function isHexEditorUrlEnabled() {
@@ -74,9 +78,16 @@ function hexToPixel(q, r) {
 }
 
 function getTileKey(hex, state) {
-  if (state === 'hidden') return 'grass_empty';
-
   const type = hex.type;
+  if (state === 'hidden') {
+    if (type === 'shop') {
+      const tier = hex.shopTier || 0;
+      return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
+    }
+    if (type === 'soil') return 'dirt_empty';
+    return 'grass_empty';
+  }
+
   if (type === 'shop') {
     const tier = hex.shopTier || 0;
     return ['shop_blue', 'shop_copper', 'shop_gold'][tier];
@@ -88,7 +99,6 @@ function getTileKey(hex, state) {
     if (plant) return 'dirt_sprout';
     return 'dirt_seed';
   }
-  if (hex.revealed) return 'grass_flowers';
   return 'grass_empty';
 }
 
@@ -99,36 +109,30 @@ function drawHex(ctx, cx, cy, images, hex, state) {
 
   if (img && img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+    if (state === 'hidden' || state === 'reachable') {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillRect(cx - o.tileW / 2, cy - o.tileH / 2, o.tileW, o.tileH);
+    }
   }
 
-  if (state === 'hidden') {
+  if (state === 'hidden' && hex.type === 'normal') {
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('?', cx, cy);
-  } else if (state === 'current') {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i - 30);
-      const x = cx + HEX_SIZE * 1.05 * Math.cos(angle);
-      const y = cy + HEX_SIZE * 1.05 * Math.sin(angle) * 0.85;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = '#5E6B7A';
-    ctx.lineWidth = 3;
-    ctx.stroke();
   } else if (state === 'reachable') {
+    const o = getOffsets();
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 180) * (60 * i - 30);
-      const x = cx + HEX_SIZE * 1.05 * Math.cos(angle);
-      const y = cy + HEX_SIZE * 1.05 * Math.sin(angle) * 0.85;
+      const x = cx + o.hexW * Math.cos(angle);
+      const baseY = o.hexH * Math.sin(angle);
+      const y = cy + (o.hexOfsY || 0) + baseY + Math.sign(baseY) * (o.hexMid || 0);
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.closePath();
-    ctx.strokeStyle = '#D4A830';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2.5;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
@@ -149,6 +153,10 @@ function createEditor(renderFn, { onClose } = {}) {
     { key: 'rowHeight', label: 'Row Height (r dy)', min: 10, max: 120, step: 0.5 },
     { key: 'tileW', label: 'Tile Width', min: 40, max: 220, step: 1 },
     { key: 'tileH', label: 'Tile Height', min: 40, max: 220, step: 1 },
+    { key: 'hexW', label: 'Hex Overlay W', min: 10, max: 80, step: 0.5 },
+    { key: 'hexH', label: 'Hex Overlay H', min: 10, max: 80, step: 0.5 },
+    { key: 'hexMid', label: 'Hex Mid Stretch', min: -30, max: 40, step: 0.5 },
+    { key: 'hexOfsY', label: 'Hex Overlay Y Ofs', min: -30, max: 30, step: 0.5 },
   ];
 
   let html = '<div style="font-weight:700;margin-bottom:6px">Hex Placement Editor</div>';
@@ -238,8 +246,9 @@ export function mount(container) {
         <img src="${namedAsset('seeds.png')}" style="width:18px;height:18px;vertical-align:middle"> <span id="hex-seeds">${econ.seeds}</span>
       </div>
     </div>
-    <div class="hex-game__canvas-container">
+    <div class="hex-game__canvas-container" style="position:relative">
       <canvas id="hex-canvas"></canvas>
+      <img id="crow-sprite" src="${namedAsset('walking_hex.png')}" style="position:absolute;height:50px;object-fit:contain;pointer-events:none;transform:translate(-50%,-85%);z-index:10;mix-blend-mode:multiply">
     </div>
     ${board.pendingSteps === 0 ? `
       <div style="text-align:center;margin-top:8px;color:var(--text-light);font-size:14px">
@@ -269,12 +278,42 @@ export function mount(container) {
 
   resize();
 
+  const crowSprite = div.querySelector('#crow-sprite');
+  let crowWorldPos = null;
+  let animating = false;
+
   let unsub = store.subscribe('economy:changed', (econ) => {
     const el = div.querySelector('#hex-seeds');
     if (el) el.textContent = econ.seeds;
   });
 
-  function render() {
+  function freezeCrow() {
+    const w = crowSprite.naturalWidth || crowSprite.width;
+    const h = crowSprite.naturalHeight || crowSprite.height;
+    if (!w || !h) return;
+    const freezeCanvas = document.createElement('canvas');
+    freezeCanvas.width = w;
+    freezeCanvas.height = h;
+    freezeCanvas.getContext('2d').drawImage(crowSprite, 0, 0, w, h);
+    try { crowSprite.src = freezeCanvas.toDataURL(); } catch (_) {}
+  }
+
+  function unfreezeCrow() {
+    crowSprite.src = namedAsset('walking_hex.png');
+  }
+
+  function positionCrow(worldX, worldY) {
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    const camX = crowWorldPos ? crowWorldPos.x : worldX;
+    const camY = crowWorldPos ? crowWorldPos.y : worldY;
+    const screenX = worldX - camX + w / 2;
+    const screenY = worldY - camY + h / 2;
+    crowSprite.style.left = screenX + 'px';
+    crowSprite.style.top = screenY + 'px';
+  }
+
+  function renderAt(camPos) {
     const board = getBoard();
     const currentHex = board.hexes.find(h => h.id === board.playerPosition);
     const reachable = board.pendingSteps > 0 ? new Set(currentHex.connections) : new Set();
@@ -284,18 +323,16 @@ export function mount(container) {
 
     ctx.clearRect(0, 0, w, h);
 
-    const playerPos = hexToPixel(currentHex.q, currentHex.r);
-    const offsetX = w / 2 - playerPos.x;
-    const offsetY = h / 2 - playerPos.y;
+    const offsetX = w / 2 - camPos.x;
+    const offsetY = h / 2 - camPos.y;
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
-    // Compute positions and sort by Y for depth ordering (back-to-front)
     const visible = [];
     for (const hex of board.hexes) {
       const pos = hexToPixel(hex.q, hex.r);
-      if (Math.abs(pos.x - playerPos.x) > w && Math.abs(pos.y - playerPos.y) > h) continue;
+      if (Math.abs(pos.x - camPos.x) > w && Math.abs(pos.y - camPos.y) > h) continue;
 
       let state = 'hidden';
       if (hex.id === board.playerPosition) state = 'current';
@@ -316,7 +353,50 @@ export function mount(container) {
     div.querySelector('#steps-left').textContent = board.pendingSteps;
   }
 
-  tilesReady.then(() => render());
+  function render() {
+    const board = getBoard();
+    const currentHex = board.hexes.find(h => h.id === board.playerPosition);
+    crowWorldPos = hexToPixel(currentHex.q, currentHex.r);
+    renderAt(crowWorldPos);
+    positionCrow(crowWorldPos.x, crowWorldPos.y);
+  }
+
+  function animateMove(fromPos, toPos, duration) {
+    return new Promise(resolve => {
+      animating = true;
+      unfreezeCrow();
+      const start = performance.now();
+
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const cx = fromPos.x + (toPos.x - fromPos.x) * ease;
+        const cy = fromPos.y + (toPos.y - fromPos.y) * ease;
+        crowWorldPos = { x: cx, y: cy };
+        renderAt(crowWorldPos);
+        positionCrow(cx, cy);
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+          freezeCrow();
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    });
+  }
+
+  tilesReady.then(() => {
+    render();
+    if (crowSprite.complete && crowSprite.naturalWidth > 0) {
+      freezeCrow();
+    } else {
+      crowSprite.addEventListener('load', () => freezeCrow(), { once: true });
+    }
+  });
 
   // Secret editor: enable via localStorage.setItem('crowrun_hex_editor', '1')
   let editorPanel = null;
@@ -362,6 +442,7 @@ export function mount(container) {
   }
 
   canvas.addEventListener('click', async (e) => {
+    if (animating) return;
     const board = getBoard();
     if (board.pendingSteps <= 0) return;
 
@@ -370,11 +451,11 @@ export function mount(container) {
     const y = e.clientY - rect.top;
 
     const currentHex = board.hexes.find(h => h.id === board.playerPosition);
-    const playerPos = hexToPixel(currentHex.q, currentHex.r);
+    const camPos = crowWorldPos || hexToPixel(currentHex.q, currentHex.r);
     const w = rect.width;
     const h = rect.height;
-    const offsetX = w / 2 - playerPos.x;
-    const offsetY = h / 2 - playerPos.y;
+    const offsetX = w / 2 - camPos.x;
+    const offsetY = h / 2 - camPos.y;
 
     const worldX = x - offsetX;
     const worldY = y - offsetY;
@@ -396,8 +477,15 @@ export function mount(container) {
 
     if (!clickedHex) return;
 
+    const fromPos = hexToPixel(currentHex.q, currentHex.r);
+    const toPos = hexToPixel(clickedHex.q, clickedHex.r);
+
     const result = movePlayer(clickedHex.id);
     if (!result) return;
+
+    const dist = Math.hypot(toPos.x - fromPos.x, toPos.y - fromPos.y);
+    const duration = Math.max(400, Math.min(900, dist * 8));
+    await animateMove(fromPos, toPos, duration);
 
     render();
 

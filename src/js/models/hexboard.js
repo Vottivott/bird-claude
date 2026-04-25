@@ -23,7 +23,8 @@ function extendBoard(board, count) {
 
   for (let step = 0; step < count; step++) {
     currentQ++;
-    const isBranch = rng() < 0.25 && step > 1 && step < count - 2;
+    const prevHexForBranch = board.hexes.find(h => h.id === prevIds[0]);
+    const isBranch = rng() < 0.25 && step > 1 && step < count - 2 && prevHexForBranch && prevHexForBranch.r === 0;
 
     let type = 'normal';
     shopCounter--;
@@ -37,9 +38,11 @@ function extendBoard(board, count) {
     }
 
     if (isBranch) {
+      const rA = -1;
+      const rB = 1;
       const hexA = {
         id: nextId++,
-        q: currentQ, r: -1,
+        q: currentQ, r: rA,
         type,
         shopTier: type === 'shop' ? pickShopTier(rng) : undefined,
         content: null,
@@ -58,7 +61,7 @@ function extendBoard(board, count) {
 
       const hexB = {
         id: nextId++,
-        q: currentQ, r: 1,
+        q: currentQ, r: rB,
         type: type2,
         shopTier: type2 === 'shop' ? pickShopTier(rng) : undefined,
         content: null,
@@ -87,7 +90,14 @@ function extendBoard(board, count) {
       hexB.connections.push(mergeHex.id);
       prevIds = [mergeHex.id];
     } else {
-      const r = rng() < 0.3 ? (rng() < 0.5 ? -1 : 1) : 0;
+      const prevHex = board.hexes.find(h => h.id === prevIds[0]);
+      const prevR = prevHex ? prevHex.r : 0;
+      let r;
+      if (prevR === 0) {
+        r = rng() < 0.15 ? (rng() < 0.5 ? -1 : 1) : 0;
+      } else {
+        r = rng() < 0.4 ? 0 : prevR;
+      }
       const hex = {
         id: nextId++,
         q: currentQ, r,
