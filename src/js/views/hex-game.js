@@ -794,7 +794,6 @@ export function mount(container) {
     if (!seedImg || !seedImg.complete) return;
 
     animating = true;
-    crowWrapper.style.display = 'none';
 
     return new Promise(resolve => {
       const duration = 1200;
@@ -804,20 +803,21 @@ export function mount(container) {
         const t = Math.min(1, (now - start) / duration);
         const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-        const camX = fromPos.x + (toPos.x - fromPos.x) * ease;
-        const camY = fromPos.y + (toPos.y - fromPos.y) * ease;
-        renderAt({ x: camX, y: camY });
+        renderAt(fromPos);
 
         const w = canvas.width / window.devicePixelRatio;
         const h = canvas.height / window.devicePixelRatio;
+        const offsetX = w / 2 - fromPos.x;
+        const offsetY = h / 2 - fromPos.y;
+        const seedX = fromPos.x + (toPos.x - fromPos.x) * ease + offsetX;
+        const seedY = fromPos.y + (toPos.y - fromPos.y) * ease + offsetY;
         const arcOffset = -Math.sin(t * Math.PI) * 20;
-        drawTile(ctx, w / 2, h / 2 + arcOffset, seedImg, false);
+        drawTile(ctx, seedX, seedY + arcOffset, seedImg, false);
 
         if (t < 1) {
           requestAnimationFrame(tick);
         } else {
           animating = false;
-          crowWrapper.style.display = '';
           resolve();
         }
       }
