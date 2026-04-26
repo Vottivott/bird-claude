@@ -422,7 +422,8 @@ export function mount(container) {
 
     const run = createRun(minutes, distance);
     const milestones = checkAndAwardMilestones();
-    const steps = Math.ceil(distance);
+    let steps = Math.ceil(distance);
+    if (run.isFrontierPush) steps += 1;
     addSteps(steps);
 
     const details = [
@@ -430,7 +431,7 @@ export function mount(container) {
     ];
 
     if (run.isFrontierPush) {
-      details.push('New personal record!');
+      details.push('New personal record! +1 bonus step');
     }
 
     const crowSprite = run.isFrontierPush ? '55_new_record.png' : '54_very_happy.png';

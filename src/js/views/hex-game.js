@@ -10,6 +10,28 @@ import { getPlantOption } from '../models/economy.js';
 
 const HEX_SIZE = 40;
 const grownPlantHexes = new Set();
+const pendingPlantTiles = new Map();
+const plantImageCache = new Map();
+const plantSilhouetteCache = new Map();
+
+function loadPlantOverlayImage(imageFile) {
+  if (plantImageCache.has(imageFile)) return plantImageCache.get(imageFile);
+  const img = new Image();
+  img.src = plantAsset(imageFile);
+  plantImageCache.set(imageFile, img);
+  img.addEventListener('load', () => {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const cx = c.getContext('2d');
+    cx.drawImage(img, 0, 0);
+    cx.globalCompositeOperation = 'source-atop';
+    cx.fillStyle = '#000000';
+    cx.fillRect(0, 0, c.width, c.height);
+    plantSilhouetteCache.set(imageFile, c);
+  }, { once: true });
+  return img;
+}
 
 const OFFSETS_KEY = 'crowrun_hex_offsets';
 const DEFAULT_OFFSETS = {
@@ -81,7 +103,14 @@ function hexToPixel(q, r) {
   };
 }
 
+function typeToTileKey(type) {
+  if (type === 'flowers') return 'grass_flowers';
+  if (type === 'soil') return 'dirt_empty';
+  return 'grass_empty';
+}
+
 function getTileKey(hex, state) {
+  if (pendingPlantTiles.has(hex.id)) return pendingPlantTiles.get(hex.id);
   const type = hex.type;
   if (state === 'hidden') {
     if (type === 'shop') {
@@ -95,7 +124,7 @@ function getTileKey(hex, state) {
     if (type === 'plant') {
       if (grownPlantHexes.has(hex.id)) {
         const plant = getPlantAtHex(hex.id);
-        if (plant && plant.ready) return 'dirt_plant';
+        if (plant && plant.ready) return 'dirt_empty';
         if (plant) return 'dirt_sprout';
       }
       return 'dirt_seed';
@@ -113,7 +142,7 @@ function getTileKey(hex, state) {
   if (type === 'soil') return 'dirt_empty';
   if (type === 'plant') {
     const plant = getPlantAtHex(hex.id);
-    if (plant && plant.ready) return 'dirt_plant';
+    if (plant && plant.ready) return 'dirt_empty';
     if (plant) return 'dirt_sprout';
     return 'dirt_seed';
   }
@@ -623,6 +652,34 @@ export function mount(container) {
       drawHex(ctx, pos.x, pos.y, images, hex, state);
     }
 
+    const allPlants = store.getPlants();
+    const collectedTypes = new Set(allPlants.filter(p => p.collected).map(p => p.plantType));
+    const ofsPlant = getOffsets();
+    for (const { hex, pos, state } of visible) {
+      if (hex.type !== 'plant') continue;
+      const plant = getPlantAtHex(hex.id);
+      if (!plant || !plant.ready) continue;
+      if (state === 'hidden' && !grownPlantHexes.has(hex.id)) continue;
+
+      const img = loadPlantOverlayImage(plant.image);
+      if (!img.complete || !img.naturalWidth) continue;
+
+      const revealed = collectedTypes.has(plant.plantType);
+      const source = revealed ? img : plantSilhouetteCache.get(plant.image);
+      if (!source) continue;
+
+      const srcW = source instanceof HTMLCanvasElement ? source.width : source.naturalWidth;
+      const srcH = source instanceof HTMLCanvasElement ? source.height : source.naturalHeight;
+      const aspect = srcW / srcH;
+      const drawH = ofsPlant.tileH * 0.6;
+      const drawW = drawH * aspect;
+      const baseY = pos.y + ofsPlant.tileH * 0.05;
+
+      if (state === 'hidden' || state === 'reachable') ctx.globalAlpha = 0.7;
+      ctx.drawImage(source, pos.x - drawW / 2, baseY - drawH, drawW, drawH);
+      ctx.globalAlpha = 1;
+    }
+
     ctx.restore();
 
     div.querySelector('#steps-left').textContent = board.pendingSteps;
@@ -813,7 +870,10 @@ export function mount(container) {
     render();
   });
 
-  async function animateSoilPlacement(fromHexId, toHexId) {
+  async function animateSoilPlacement(fromHexId, toHexId, originalTargetType) {
+    if (originalTargetType) {
+      pendingPlantTiles.set(toHexId, typeToTileKey(originalTargetType));
+    }
     const board = getBoard();
     const fromHex = board.hexes.find(h => h.id === fromHexId);
     const toHex = board.hexes.find(h => h.id === toHexId);
@@ -863,6 +923,7 @@ export function mount(container) {
       requestAnimationFrame(tick);
     });
 
+    pendingPlantTiles.delete(toHexId);
     crowWorldPos = { x: toPos.x, y: toPos.y };
     renderAt(crowWorldPos);
     positionCrow(fromPos.x, fromPos.y + crowYOffset(fromHex));
@@ -1090,7 +1151,7 @@ export function mount(container) {
           });
 
           modal.close();
-          await animateSoilPlacement(hexId, planted.hexId);
+          await animateSoilPlacement(hexId, planted.hexId, planted.originalTargetType);
           resolve();
         });
       });
@@ -1098,6 +1159,61 @@ export function mount(container) {
       modal.sheet.querySelector('#soil-close').addEventListener('click', () => {
         modal.close();
         resolve();
+      });
+    });
+  }
+
+  function showWaterChoiceModal(plant, remaining) {
+    return new Promise((resolve) => {
+      const econ = store.getEconomy();
+      const waterByType = {};
+      for (const w of econ.waterInventory) {
+        if (w.usesLeft > 0) {
+          waterByType[w.size] = (waterByType[w.size] || 0) + w.usesLeft;
+        }
+      }
+
+      const canTypes = [
+        { size: 'Blue Watering Can', icon: 'watering_can_blue.png', label: 'Blue Can' },
+        { size: 'Copper Watering Can', icon: 'watering_can_copper.png', label: 'Copper Can' },
+        { size: 'Gold Watering Can', icon: 'watering_can_gold.png', label: 'Gold Can' },
+      ];
+      const available = canTypes.filter(c => waterByType[c.size] > 0);
+
+      const plantImg = plant.image ? plantAsset(plant.image) : null;
+      const html = `
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">
+          ${plantImg ? `<img src="${plantImg}" style="max-height:60px;display:block;margin:0 auto 8px;${plant.ready ? '' : 'filter:brightness(0)'}">` : ''}
+          Water Your Plant
+        </h3>
+        <p style="text-align:center;color:var(--text-light);margin-bottom:16px">Needs ${remaining} more watering${remaining > 1 ? 's' : ''}</p>
+
+        ${available.length > 0 ? available.map(c => `
+          <div style="display:flex;align-items:center;padding:12px;background:var(--bg);border-radius:var(--radius-xs);margin-bottom:8px;gap:12px">
+            <img src="${namedAsset(c.icon)}" style="width:36px;height:36px;object-fit:contain;flex-shrink:0">
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px">${c.label}</div>
+              <div style="font-size:12px;color:var(--text-light)">${waterByType[c.size]} use${waterByType[c.size] > 1 ? 's' : ''} left</div>
+            </div>
+            <button class="btn btn--primary water-choice-btn" data-size="${c.size}" style="padding:8px 16px;font-size:14px;flex-shrink:0">Use</button>
+          </div>
+        `).join('') : '<p style="text-align:center;color:var(--text-light);margin-bottom:8px">No watering cans in inventory</p>'}
+
+        <button class="btn btn--ghost" style="width:100%;margin-top:12px" id="water-skip">Don't Water</button>
+      `;
+
+      const modal = showModal(html, () => resolve(null));
+
+      modal.sheet.querySelectorAll('.water-choice-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          resolve(btn.dataset.size);
+          modal.overlay.remove();
+        });
+      });
+
+      modal.sheet.querySelector('#water-skip').addEventListener('click', () => {
+        resolve(null);
+        modal.overlay.remove();
       });
     });
   }
@@ -1122,12 +1238,12 @@ export function mount(container) {
         return;
       }
     } else {
-      const waterCount = store.getWaterCount();
       const remaining = plant.wateringsNeeded - plant.wateringsGiven;
+      const chosenWater = await showWaterChoiceModal(plant, remaining);
 
-      if (waterCount > 0) {
+      if (chosenWater) {
         const oldHexId = plant.hexId;
-        const watered = waterPlant(plant.id);
+        const watered = waterPlant(plant.id, chosenWater);
         if (watered) {
           const crowSprite = remaining > 2 ? '48_watering_large.png' : '37_watering_small.png';
           const left = watered.wateringsNeeded - watered.wateringsGiven;
@@ -1135,11 +1251,11 @@ export function mount(container) {
             crowSprite,
             title: 'Watered!',
             details: watered.ready
-              ? 'Your plant is ready to collect!'
+              ? 'Your plant is growing! Find it further ahead to collect it.'
               : `Your plant needs ${left} more watering${left > 1 ? 's' : ''}. Find it further ahead!`,
           });
-          if (!watered.ready && watered.hexId !== oldHexId) {
-            await animateSoilPlacement(hexId, watered.hexId);
+          if (watered.hexId !== oldHexId) {
+            await animateSoilPlacement(hexId, watered.hexId, watered.originalTargetType);
           }
         }
       } else {
@@ -1158,7 +1274,7 @@ export function mount(container) {
             details: `The plant lost some growth. It needs ${left} watering${left > 1 ? 's' : ''} now. Find it further ahead!`,
           });
           if (result.fromHexId && result.toHexId) {
-            await animateSoilPlacement(hexId, result.toHexId);
+            await animateSoilPlacement(hexId, result.toHexId, result.originalTargetType);
           }
         }
       }

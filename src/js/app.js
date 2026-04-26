@@ -71,7 +71,8 @@ initRouter(container);
     panel.innerHTML = `
       <div style="font-weight:700;font-size:18px;margin-bottom:4px">Secret Menu</div>
       <div style="font-size:12px;color:#999;margin-bottom:16px">v${__APP_ASSET_VERSION__}</div>
-      <button id="secret-update" style="width:100%;padding:14px;border:none;border-radius:10px;background:#3182CE;color:white;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px">Check for Updates</button>
+      <button id="secret-update" style="width:100%;padding:14px;border:none;border-radius:10px;background:#3182CE;color:white;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:5px">Check for Updates</button>
+      <button id="secret-force-update" style="width:100%;padding:10px;border:none;border-radius:10px;background:#718096;color:white;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:10px">Force Update (re-downloads all)</button>
       <div id="secret-assets" style="margin-bottom:10px"><div style="font-size:13px;color:#999">Checking assets...</div></div>
       <button id="secret-clear" style="width:100%;padding:14px;border:none;border-radius:10px;background:#E53E3E;color:white;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px">Clear All Data</button>
       <button id="secret-close" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;font-size:14px;cursor:pointer">Cancel</button>
@@ -87,9 +88,20 @@ initRouter(container);
       try {
         const reg = await navigator.serviceWorker?.getRegistration();
         if (reg) {
-          reg.update().catch(() => {});
-          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          await Promise.race([reg.update(), new Promise(r => setTimeout(r, 5000))]);
+          const waiting = reg.waiting || reg.installing;
+          if (waiting) waiting.postMessage({ type: 'SKIP_WAITING' });
         }
+      } catch {}
+      window.location.reload();
+    });
+    panel.querySelector('#secret-force-update').addEventListener('click', async () => {
+      const btn = panel.querySelector('#secret-force-update');
+      btn.textContent = 'Clearing...';
+      btn.disabled = true;
+      try {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        if (reg) await reg.unregister();
       } catch {}
       try {
         if ('caches' in window) {

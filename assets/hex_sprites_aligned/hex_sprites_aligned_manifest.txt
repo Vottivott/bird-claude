@@ -8,5 +8,5 @@
 08_grass_hex_shop_blue_can.png size=(591, 555) original=(584, 552) hex_bbox=(0, 193, 584, 476) offset=(4,1)
 09_grass_hex_shop_copper_can.png size=(591, 555) original=(580, 553) hex_bbox=(0, 193, 580, 477) offset=(6,0)
 10_grass_hex_shop_gold_can.png size=(591, 555) original=(581, 551) hex_bbox=(0, 192, 581, 475) offset=(5,2)
-11_wizened.png size=(591, 555) original=(529, 476) hex_bbox=(0, 137, 528, 398) offset=(32,79)
+11_wizened.png size=(591, 555) original=(529, 498) hex_bbox=(0, 133, 528, 386) offset=(32,55)
 common_canvas=(591,555) common_hex_center=295.5 common_hex_bottom=477

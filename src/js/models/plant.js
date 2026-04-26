@@ -14,7 +14,7 @@ export function plantSeed(plantOption, currentHexId) {
     if (next === undefined) break;
     visited.add(next);
     current = board.hexes.find(h => h.id === next);
-    if (current.type === 'normal' || current.type === 'start') targetHexId = next;
+    if (['normal', 'start', 'flowers'].includes(current.type)) targetHexId = next;
   }
 
   const plant = {
@@ -34,6 +34,7 @@ export function plantSeed(plantOption, currentHexId) {
 
   const targetHex = board.hexes.find(h => h.id === targetHexId);
   if (targetHex) {
+    plant.originalTargetType = targetHex.type;
     targetHex.type = 'plant';
     targetHex.plantData = { plantId: plant.id };
     store.setHexBoard(board);
@@ -42,41 +43,42 @@ export function plantSeed(plantOption, currentHexId) {
   return plant;
 }
 
-export function waterPlant(plantId) {
+export function waterPlant(plantId, waterSize) {
   const plants = store.getPlants();
   const plant = plants.find(p => p.id === plantId);
   if (!plant) return null;
 
-  const waterResult = store.useWater();
+  const waterResult = store.useWater(waterSize);
   if (!waterResult) return null;
 
   plant.wateringsGiven++;
 
+  const board = store.getHexBoard();
+  const currentHex = board.hexes.find(h => h.id === plant.hexId);
+  if (currentHex) {
+    const rng = createRNG(Date.now());
+    const offset = randomInt(rng, 3, 6);
+    let walker = currentHex;
+    let target = currentHex;
+    let visited = new Set([plant.hexId]);
+    for (let i = 0; i < offset && walker; i++) {
+      const next = walker.connections.find(id => !visited.has(id));
+      if (next === undefined) break;
+      visited.add(next);
+      walker = board.hexes.find(h => h.id === next);
+      if (['normal', 'start', 'flowers'].includes(walker.type)) target = walker;
+    }
+    plant.originalTargetType = target.type;
+    currentHex.type = 'normal';
+    delete currentHex.plantData;
+    plant.hexId = target.id;
+    target.type = 'plant';
+    target.plantData = { plantId: plant.id };
+    store.setHexBoard(board);
+  }
+
   if (plant.wateringsGiven >= plant.wateringsNeeded) {
     plant.ready = true;
-  } else {
-    const board = store.getHexBoard();
-    const currentHex = board.hexes.find(h => h.id === plant.hexId);
-    if (currentHex) {
-      const rng = createRNG(Date.now());
-      const offset = randomInt(rng, 3, 6);
-      let walker = currentHex;
-      let target = currentHex;
-      let visited = new Set([plant.hexId]);
-      for (let i = 0; i < offset && walker; i++) {
-        const next = walker.connections.find(id => !visited.has(id));
-        if (next === undefined) break;
-        visited.add(next);
-        walker = board.hexes.find(h => h.id === next);
-        if (walker.type === 'normal' || walker.type === 'start') target = walker;
-      }
-      currentHex.type = 'normal';
-      delete currentHex.plantData;
-      plant.hexId = target.id;
-      target.type = 'plant';
-      target.plantData = { plantId: plant.id };
-      store.setHexBoard(board);
-    }
   }
 
   store.setPlants(plants);
@@ -118,9 +120,10 @@ export function neglectPlant(plantId) {
       if (next === undefined) break;
       visited.add(next);
       walker = board.hexes.find(h => h.id === next);
-      if (walker.type === 'normal' || walker.type === 'start') target = walker;
+      if (['normal', 'start', 'flowers'].includes(walker.type)) target = walker;
     }
     const oldHexId = plant.hexId;
+    const originalTargetType = target.type;
     currentHex.type = 'normal';
     delete currentHex.plantData;
     plant.hexId = target.id;
@@ -128,7 +131,7 @@ export function neglectPlant(plantId) {
     target.plantData = { plantId: plant.id };
     store.setHexBoard(board);
     store.setPlants(plants);
-    return { plant, died: false, fromHexId: oldHexId, toHexId: target.id };
+    return { plant, died: false, fromHexId: oldHexId, toHexId: target.id, originalTargetType };
   }
 
   store.setPlants(plants);

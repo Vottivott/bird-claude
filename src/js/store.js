@@ -103,9 +103,11 @@ export function addWater(size, uses) {
   return econ;
 }
 
-export function useWater() {
+export function useWater(size) {
   const econ = getEconomy();
-  const idx = econ.waterInventory.findIndex(w => w.usesLeft > 0);
+  const idx = size
+    ? econ.waterInventory.findIndex(w => w.size === size && w.usesLeft > 0)
+    : econ.waterInventory.findIndex(w => w.usesLeft > 0);
   if (idx === -1) return null;
   econ.waterInventory[idx].usesLeft--;
   if (econ.waterInventory[idx].usesLeft <= 0) econ.waterInventory.splice(idx, 1);

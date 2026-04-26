@@ -40,7 +40,7 @@ function extendBoard(board, count) {
     } else if (soilCounter <= 0) {
       type = 'soil';
       soilCounter = randomInt(rng, 2, 7);
-    } else if (rng() < 0.2) {
+    } else if (rng() < 0.4) {
       type = 'flowers';
     }
 
