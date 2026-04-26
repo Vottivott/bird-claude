@@ -106,9 +106,12 @@ function cacheBustPublicAssetsPlugin() {
   };
 }
 
+const base = process.env.GITHUB_PAGES ? '/bird-claude/' : '/';
+
 export default defineConfig({
   root: 'src',
   publicDir: '../public',
+  base,
   define: {
     __APP_ASSET_VERSION__: JSON.stringify(assetVersion),
   },

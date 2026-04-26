@@ -172,14 +172,14 @@ function revealHexOnBoard(board, hexId) {
   const rng = createRNG(board.boardSeed + hexId * 7919);
 
   if (hex.type === 'normal' || hex.type === 'start' || hex.type === 'wizened') {
-    const seeds = randomInt(rng, 1, 3);
+    const seeds = randomInt(rng, 1, 5);
     let sticks = 0;
     if (rng() < 0.33) {
       sticks = rng() < 0.67 ? 1 : randomInt(rng, 3, 5);
     }
     hex.content = { seeds, sticks };
   } else if (hex.type === 'flowers') {
-    const seeds = randomInt(rng, 5, 10);
+    const seeds = randomInt(rng, 5, 15);
     let sticks = 0;
     if (rng() < 0.33) {
       sticks = rng() < 0.67 ? 1 : randomInt(rng, 3, 5);

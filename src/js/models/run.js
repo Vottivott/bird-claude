@@ -7,8 +7,8 @@ export function createRun(durationMinutes, distanceKm) {
   const newPoint = { x: distanceKm, y: speedKmh };
   const isFrontierPush = checkFrontierPush(newPoint, existingRuns);
 
-  let seedsEarned = 10;
-  if (isFrontierPush) seedsEarned += 5;
+  let seedsEarned = 20;
+  if (isFrontierPush) seedsEarned += 10;
 
   const run = {
     id: 'r_' + Date.now(),

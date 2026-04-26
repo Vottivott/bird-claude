@@ -52,8 +52,8 @@ export function mount(container) {
       </div>
 
       <div class="card" style="text-align:center;color:var(--text-light)">
-        <div style="font-size:13px">You earn <strong style="color:var(--accent)">10 seeds</strong> per run</div>
-        <div style="font-size:13px">Beat your records for <strong style="color:var(--accent)">+5 bonus</strong></div>
+        <div style="font-size:13px">You earn <strong style="color:var(--accent)">20 seeds</strong> per run</div>
+        <div style="font-size:13px">Beat your records for <strong style="color:var(--accent)">+10 bonus</strong></div>
       </div>
 
       <button class="btn btn--ghost" id="btn-show-manual" style="width:100%;margin-top:4px;font-size:13px;color:var(--text-muted)">Enter time manually</button>
@@ -78,8 +78,8 @@ export function mount(container) {
       </div>
 
       <div class="card" style="text-align:center;color:var(--text-light)">
-        <div style="font-size:13px">You earn <strong style="color:var(--accent)">10 seeds</strong> per run</div>
-        <div style="font-size:13px">Beat your records for <strong style="color:var(--accent)">+5 bonus</strong></div>
+        <div style="font-size:13px">You earn <strong style="color:var(--accent)">20 seeds</strong> per run</div>
+        <div style="font-size:13px">Beat your records for <strong style="color:var(--accent)">+10 bonus</strong></div>
       </div>
 
       <button class="btn btn--ghost" id="btn-show-timer" style="width:100%;margin-top:4px;font-size:13px;color:var(--text-muted)">Use stopwatch instead</button>
@@ -423,7 +423,7 @@ export function mount(container) {
     const run = createRun(minutes, distance);
     const milestones = checkAndAwardMilestones();
     let steps = Math.ceil(distance);
-    if (run.isFrontierPush) steps += 1;
+    if (run.isFrontierPush) steps += 2;
     addSteps(steps);
 
     const details = [
@@ -431,7 +431,7 @@ export function mount(container) {
     ];
 
     if (run.isFrontierPush) {
-      details.push('New personal record! +1 bonus step');
+      details.push('New personal record! +2 bonus steps');
     }
 
     const crowSprite = run.isFrontierPush ? '55_new_record.png' : '54_very_happy.png';

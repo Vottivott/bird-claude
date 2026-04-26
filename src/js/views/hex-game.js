@@ -653,7 +653,7 @@ export function mount(container) {
     }
 
     const allPlants = store.getPlants();
-    const collectedTypes = new Set(allPlants.filter(p => p.collected).map(p => p.plantType));
+    const collectedTypes = new Set(allPlants.filter(p => p.collected && !p.dead).map(p => p.plantType));
     const ofsPlant = getOffsets();
     for (const { hex, pos, state } of visible) {
       if (hex.type !== 'plant') continue;
@@ -1045,7 +1045,7 @@ export function mount(container) {
 
   function pickSoilOptions(hexId) {
     const plants = store.getPlants();
-    const collectedTypes = new Set(plants.filter(p => p.collected).map(p => p.plantType));
+    const collectedTypes = new Set(plants.filter(p => p.collected && !p.dead).map(p => p.plantType));
     const inProgressTypes = new Set(plants.filter(p => !p.collected).map(p => p.plantType));
     const econ = store.getEconomy();
     const seeds = econ.seeds;

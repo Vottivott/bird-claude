@@ -1,4 +1,5 @@
 import { namedAsset, assetUrl } from '../utils/assets.js';
+const BASE = import.meta.env.BASE_URL;
 
 export function showToast(message, duration = 2500) {
   const existing = document.querySelector('.toast');
@@ -54,7 +55,7 @@ export function showRewardPopup(options) {
         ${detailsHtml}
         ${seedsAmount ? `<div class="reward-popup__reward"><img src="${namedAsset('seeds.png')}" class="reward-popup__reward-icon">+${seedsAmount} seed${seedsAmount !== 1 ? 's' : ''}</div>` : ''}
         ${sticksAmount ? `<div class="reward-popup__reward" style="color:var(--brown)"><img src="${namedAsset('stick_pair.png')}" class="reward-popup__reward-icon" style="filter:drop-shadow(1px 0 0 #F5EDD4) drop-shadow(-1px 0 0 #F5EDD4) drop-shadow(0 1px 0 #F5EDD4) drop-shadow(0 -1px 0 #F5EDD4)">+${sticksAmount} stick${sticksAmount !== 1 ? 's' : ''}</div>` : ''}
-        ${stepsAmount ? `<div class="reward-popup__reward" style="color:var(--text)"><img src="${assetUrl('/assets/bird_footsteps.png')}" class="reward-popup__reward-icon">+${stepsAmount} step${stepsAmount !== 1 ? 's' : ''}</div>` : ''}
+        ${stepsAmount ? `<div class="reward-popup__reward" style="color:var(--text)"><img src="${assetUrl(`${BASE}assets/bird_footsteps.png`)}" class="reward-popup__reward-icon">+${stepsAmount} step${stepsAmount !== 1 ? 's' : ''}</div>` : ''}
         <button class="btn btn--primary" style="margin-top:16px;width:100%">Continue</button>
       </div>
     `;

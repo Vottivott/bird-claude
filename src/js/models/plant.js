@@ -9,12 +9,15 @@ export function plantSeed(plantOption, currentHexId) {
   let visited = new Set([currentHexId]);
   let current = board.hexes.find(h => h.id === currentHexId);
 
-  for (let i = 0; i < offset && current; i++) {
+  for (let i = 0; i < offset && current; ) {
     const next = current.connections.find(id => !visited.has(id));
     if (next === undefined) break;
     visited.add(next);
     current = board.hexes.find(h => h.id === next);
-    if (['normal', 'start', 'flowers'].includes(current.type)) targetHexId = next;
+    if (['normal', 'start', 'flowers'].includes(current.type)) {
+      targetHexId = next;
+      i++;
+    }
   }
 
   const plant = {
@@ -61,12 +64,15 @@ export function waterPlant(plantId, waterSize) {
     let walker = currentHex;
     let target = currentHex;
     let visited = new Set([plant.hexId]);
-    for (let i = 0; i < offset && walker; i++) {
+    for (let i = 0; i < offset && walker; ) {
       const next = walker.connections.find(id => !visited.has(id));
       if (next === undefined) break;
       visited.add(next);
       walker = board.hexes.find(h => h.id === next);
-      if (['normal', 'start', 'flowers'].includes(walker.type)) target = walker;
+      if (['normal', 'start', 'flowers'].includes(walker.type)) {
+        target = walker;
+        i++;
+      }
     }
     plant.originalTargetType = target.type;
     currentHex.type = 'normal';
@@ -115,12 +121,15 @@ export function neglectPlant(plantId) {
     let walker = currentHex;
     let target = currentHex;
     let visited = new Set([plant.hexId]);
-    for (let i = 0; i < offset && walker; i++) {
+    for (let i = 0; i < offset && walker; ) {
       const next = walker.connections.find(id => !visited.has(id));
       if (next === undefined) break;
       visited.add(next);
       walker = board.hexes.find(h => h.id === next);
-      if (['normal', 'start', 'flowers'].includes(walker.type)) target = walker;
+      if (['normal', 'start', 'flowers'].includes(walker.type)) {
+        target = walker;
+        i++;
+      }
     }
     const oldHexId = plant.hexId;
     const originalTargetType = target.type;

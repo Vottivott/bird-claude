@@ -1,8 +1,8 @@
 import * as store from '../store.js';
 
 export const SHOP_ITEMS = [
-  { id: 'swimming_pool', name: 'Swimming Pool', cost: 1000, emoji: '' },
-  { id: 'sunchair', name: 'Sunchair & Umbrella', cost: 500, emoji: '' },
+  { id: 'swimming_pool', name: 'Swimming Pool', cost: 1000, image: 'swimming_pool.png' },
+  { id: 'sunchair', name: 'Sunchair & Umbrella', cost: 500, image: 'sunchair_with_umbrella.png' },
 ];
 
 export const PLANT_OPTIONS = [
@@ -39,7 +39,7 @@ export function buyShopItem(item) {
   const result = store.spendSeeds(item.cost, 'shop_purchase');
   if (!result) return false;
   const nest = store.getNest();
-  nest.inventory.push({ itemId: item.id, name: item.name });
+  nest.inventory.push({ itemId: item.id, name: item.name, type: 'furniture', image: item.image });
   store.setNest(nest);
   return true;
 }
