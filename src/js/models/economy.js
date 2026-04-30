@@ -6,18 +6,18 @@ export const SHOP_ITEMS = [
 ];
 
 export const PLANT_OPTIONS = [
-  { id: 'dandelion_seedhead', name: 'Dandelion Puff', cost: 50, wateringsNeeded: 1, image: 'dandelion_seedhead.png' },
-  { id: 'dandelion_flower', name: 'Dandelion', cost: 100, wateringsNeeded: 1, image: 'dandelion_flower.png' },
-  { id: 'coltsfoot_flower', name: 'Coltsfoot', cost: 150, wateringsNeeded: 1, image: 'coltsfoot_flower.png' },
-  { id: 'blue_violets', name: 'Blue Violets', cost: 200, wateringsNeeded: 2, image: 'blue_violets.png' },
-  { id: 'white_anemone', name: 'White Anemone', cost: 300, wateringsNeeded: 2, image: 'white_anemone.png' },
-  { id: 'cornflower', name: 'Cornflower', cost: 500, wateringsNeeded: 2, image: 'cornflower.png' },
-  { id: 'lily_of_the_valley', name: 'Lily of the Valley', cost: 700, wateringsNeeded: 2, image: 'lily_of_the_valley.png' },
-  { id: 'wild_strawberry_single', name: 'Wild Strawberry', cost: 1000, wateringsNeeded: 3, image: 'wild_strawberry_single.png' },
-  { id: 'strawberry', name: 'Strawberry', cost: 1200, wateringsNeeded: 3, image: 'strawberry.png' },
-  { id: 'wild_strawberry_cluster', name: 'Strawberry Bush', cost: 1500, wateringsNeeded: 4, image: 'wild_strawberry_cluster.png' },
-  { id: 'blackberry', name: 'Blackberry', cost: 1800, wateringsNeeded: 4, image: 'blackberry.png' },
-  { id: 'raspberries', name: 'Raspberries', cost: 2000, wateringsNeeded: 4, image: 'raspberries.png' },
+  { id: 'dandelion_seedhead', name: 'Maskros-puff', cost: 50, wateringsNeeded: 1, image: 'dandelion_seedhead.png' },
+  { id: 'dandelion_flower', name: 'Maskros', cost: 100, wateringsNeeded: 1, image: 'dandelion_flower.png' },
+  { id: 'coltsfoot_flower', name: 'Tussilago', cost: 150, wateringsNeeded: 1, image: 'coltsfoot_flower.png' },
+  { id: 'blue_violets', name: 'Blåsippa', cost: 200, wateringsNeeded: 2, image: 'blue_violets.png' },
+  { id: 'white_anemone', name: 'Vitsippa', cost: 300, wateringsNeeded: 2, image: 'white_anemone.png' },
+  { id: 'cornflower', name: 'Blåklint', cost: 500, wateringsNeeded: 2, image: 'cornflower.png' },
+  { id: 'lily_of_the_valley', name: 'Liljekonvalj', cost: 700, wateringsNeeded: 2, image: 'lily_of_the_valley.png' },
+  { id: 'wild_strawberry_single', name: 'Hallon', cost: 1000, wateringsNeeded: 3, image: 'wild_strawberry_single.png' },
+  { id: 'strawberry', name: 'Jordgubbe', cost: 1200, wateringsNeeded: 3, image: 'strawberry.png' },
+  { id: 'blackberry', name: 'Björnbär', cost: 1500, wateringsNeeded: 4, image: 'blackberry.png' },
+  { id: 'wild_strawberry_cluster', name: 'Smultronställe', cost: 1800, wateringsNeeded: 4, image: 'wild_strawberry_cluster.png' },
+  { id: 'raspberries', name: 'Litchi', cost: 2000, wateringsNeeded: 4, image: 'raspberries.png' },
   { id: 'iced_coffee_cup_plant', name: 'Brown Sugar Bubble Tea', cost: 5000, wateringsNeeded: 6, image: 'iced_coffee_cup_plant.png' },
 ];
 
