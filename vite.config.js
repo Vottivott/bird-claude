@@ -20,6 +20,13 @@ function buildAssetVersion() {
 }
 
 const assetVersion = buildAssetVersion();
+const base = process.env.GITHUB_PAGES ? '/bird-claude/' : '/';
+
+function withBase(urlPath) {
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = String(urlPath || '').replace(/^\/+/, '');
+  return `${normalizedBase}${normalizedPath}`;
+}
 
 function cacheBustPublicAssetsPlugin() {
   return {
@@ -63,13 +70,14 @@ function cacheBustPublicAssetsPlugin() {
           'retint_manifest.json',
         ];
         const skipDirs = ['named_selection_borderless_8x_cleaned/'];
-        const precacheList = ['/'];
+        const precacheList = [withBase('')];
         function walk(dir) {
           for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
             const full = path.join(dir, entry.name);
-            const rel = '/' + path.relative(distDir, full);
+            const relPath = path.relative(distDir, full).replaceAll(path.sep, '/');
+            const rel = withBase(relPath);
             if (entry.isDirectory()) {
-              if (rel === '/assets/named_selection_borderless_8x_cleaned') continue;
+              if (relPath === 'assets/named_selection_borderless_8x_cleaned') continue;
               walk(full);
             } else {
               if (skip.some(s => entry.name === s)) continue;
@@ -86,13 +94,14 @@ function cacheBustPublicAssetsPlugin() {
       }
 
       const distRoot = path.resolve(__dirname, 'dist');
-      const allAssets = ['/'];
+      const allAssets = [withBase('')];
       function walkAll(dir) {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
           const full = path.join(dir, entry.name);
-          const rel = '/' + path.relative(distRoot, full);
+          const relPath = path.relative(distRoot, full).replaceAll(path.sep, '/');
+          const rel = withBase(relPath);
           if (entry.isDirectory()) {
-            if (rel === '/assets/named_selection_borderless_8x_cleaned') continue;
+            if (relPath === 'assets/named_selection_borderless_8x_cleaned') continue;
             walkAll(full);
           } else {
             if (entry.name === 'sw.js' || entry.name === 'asset-manifest.json') continue;
@@ -105,8 +114,6 @@ function cacheBustPublicAssetsPlugin() {
     },
   };
 }
-
-const base = process.env.GITHUB_PAGES ? '/bird-claude/' : '/';
 
 export default defineConfig({
   root: 'src',

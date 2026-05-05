@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#5E6B7A">
-  <link rel="manifest" href="/manifest.json?v=__APP_ASSET_VERSION__">
-  <link rel="icon" href="/icons/icon-192.png?v=__APP_ASSET_VERSION__">
+  <link rel="manifest" href="%BASE_URL%manifest.json?v=__APP_ASSET_VERSION__">
+  <link rel="icon" href="%BASE_URL%icons/icon-192.png?v=__APP_ASSET_VERSION__">
   <title>Crow Run</title>
   <link rel="stylesheet" href="./styles/main.css">
   <link rel="stylesheet" href="./styles/components.css">
@@ -19,15 +19,15 @@
       </div>
       <div class="status-bar__right">
         <span class="currency currency--seeds" id="status-seeds">
-          <img src="/assets/named_selection_borderless_8x_cleaned_crow_toned/seeds.png?v=__APP_ASSET_VERSION__" alt="seeds" class="currency__icon">
+          <img src="%BASE_URL%assets/named_selection_borderless_8x_cleaned_crow_toned/seeds.png?v=__APP_ASSET_VERSION__" alt="seeds" class="currency__icon">
           <span id="seeds-count">0</span>
         </span>
         <span class="currency currency--sticks" id="status-sticks">
-          <img src="/assets/named_selection_borderless_8x_cleaned_crow_toned/stick_pair.png?v=__APP_ASSET_VERSION__" alt="sticks" class="currency__icon">
+          <img src="%BASE_URL%assets/named_selection_borderless_8x_cleaned_crow_toned/stick_pair.png?v=__APP_ASSET_VERSION__" alt="sticks" class="currency__icon">
           <span id="sticks-count">0</span>
         </span>
         <span class="currency currency--steps" id="status-steps">
-          <img src="/assets/bird_footsteps.png?v=__APP_ASSET_VERSION__" alt="steps" class="currency__icon">
+          <img src="%BASE_URL%assets/bird_footsteps.png?v=__APP_ASSET_VERSION__" alt="steps" class="currency__icon">
           <span id="steps-count">0</span>
         </span>
       </div>
@@ -152,8 +152,7 @@
   </script>
   <script>
     if ('serviceWorker' in navigator) {
-      const base = document.querySelector('base')?.href || '/';
-      navigator.serviceWorker.register(new URL('sw.js', base).pathname).catch(() => {});
+      navigator.serviceWorker.register('%BASE_URL%sw.js?v=__APP_ASSET_VERSION__', { scope: '%BASE_URL%' }).catch(() => {});
     }
   </script>
 </body>

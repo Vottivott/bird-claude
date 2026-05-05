@@ -7,6 +7,7 @@ import { mount as mountStreaks } from './views/streaks.js';
 import { mount as mountHexGame } from './views/hex-game.js';
 import { mount as mountNest } from './views/nest-view.js';
 import { mount as mountWeight } from './views/weight.js';
+import { publicAsset } from './utils/assets.js';
 
 function applyHexEditorUrlFlags() {
   const params = new URLSearchParams(window.location.search);
@@ -114,7 +115,7 @@ initRouter(container);
     (async () => {
       const section = panel.querySelector('#secret-assets');
       try {
-        const res = await fetch('/asset-manifest.json');
+        const res = await fetch(publicAsset('asset-manifest.json'));
         const allAssets = await res.json();
         const total = allAssets.length;
 
